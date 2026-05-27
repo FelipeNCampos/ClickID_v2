@@ -12,8 +12,19 @@ from datetime import timedelta
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def _csv_env(*names, default=''):
+    for name in names:
+        value = config(name, default=None)
+        if value is not None:
+            return [item.strip() for item in value.split(',') if item.strip()]
+    return [item.strip() for item in default.split(',') if item.strip()]
+
+
 # Quick-start development settings
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-3shswymd)7v!!fa_=+39fpf^5ajf2hwdu0f^@v42-1mx_a55b@')
+SECRET_KEY = config(
+    'SECRET_KEY',
+    default=config('DJANGO_SECRET_KEY', default='django-insecure-3shswymd)7v!!fa_=+39fpf^5ajf2hwdu0f^@v42-1mx_a55b@')
+)
 DEBUG = config('DEBUG', default=True, cast=bool)
 # DEBUG_ALLOWED_IPS: comma separated list of IPs allowed to see debug UI (e.g. the debug button)
 # This can be used in production for temporary debugging without enabling full DEBUG=True.
@@ -22,7 +33,14 @@ DEBUG_ALLOWED_IPS = config(
     default='127.0.0.1',
     cast=lambda v: [s.strip() for s in v.split(',') if s.strip()]
 )
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,177.201.85.3,credenciais.com.br', cast=lambda v: [s.strip() for s in v.split(',')])
+ALLOWED_HOSTS = _csv_env(
+    'ALLOWED_HOSTS',
+    'DJANGO_ALLOWED_HOSTS',
+    default='localhost,127.0.0.1,177.201.85.3,credenciais.com.br'
+)
+for _default_host in ('localhost', '127.0.0.1'):
+    if _default_host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_default_host)
 
 # Security: CSRF trusted origins and proxy settings
 # Read a comma-separated list of origins (include scheme), e.g.:
