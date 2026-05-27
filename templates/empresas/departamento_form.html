@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block title %}Novo Departamento - ClickID{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-diagram-3"></i> Novo Departamento</h2>
+    </div>
+    {% if empresa %}
+    <a href="{% url 'web-gerente:empresa-detail' empresa.usuario.id %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+    {% else %}
+    <a href="{% url 'web-empresa:dashboard' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+    {% endif %}
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Dados do Departamento</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome do Departamento *</label>
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            id="nome" 
+                            name="nome" 
+                            placeholder="Ex: TI, RH, Financeiro, Marketing"
+                            required
+                            maxlength="100"
+                        >
+                        <div class="form-text">O nome deve ser único dentro da sua empresa</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label">Descrição (Opcional)</label>
+                        <textarea 
+                            class="form-control" 
+                            id="descricao" 
+                            name="descricao" 
+                            rows="4"
+                            placeholder="Descrição opcional do departamento"
+                        ></textarea>
+                        <div class="form-text">Informações adicionais sobre o departamento</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        {% if empresa %}
+                        <a href="{% url 'web-gerente:empresa-detail' empresa.usuario.id %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </a>
+                        {% else %}
+                        <a href="{% url 'web-empresa:dashboard' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle"></i> Criar Departamento
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="bi bi-info-circle"></i> Informações</h6>
+            </div>
+            <div class="card-body">
+                <p class="small mb-2"><strong>Sobre Departamentos:</strong></p>
+                <ul class="small">
+                    <li>Organizam os profissionais da empresa</li>
+                    <li>Facilitam a gestão de equipes</li>
+                    <li>Podem ter modelos de cartão específicos</li>
+                    <li>O nome deve ser único na empresa</li>
+                    <li>A descrição é opcional mas recomendada</li>
+                </ul>
+                
+                <hr>
+                
+                <p class="small mb-2"><strong>Exemplos de Departamentos:</strong></p>
+                <ul class="small mb-0">
+                    <li>Tecnologia da Informação</li>
+                    <li>Recursos Humanos</li>
+                    <li>Financeiro</li>
+                    <li>Marketing e Vendas</li>
+                    <li>Operações</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

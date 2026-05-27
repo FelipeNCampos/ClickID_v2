@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar {{ profissional.nome }} - ClickID{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="{% url 'web-empresa:dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'web-empresa:profissionais-list' %}">Cartões</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'web-empresa:profissional-detail' profissional.usuario %}">{{ profissional.nome }}</a></li>
+                <li class="breadcrumb-item active">Editar</li>
+            </ol>
+        </nav>
+        <h2><i class="bi bi-pencil"></i> Editar Cartão</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-person-badge"></i> Dados do Cartão</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome Completo <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="nome" name="nome" value="{{ profissional.nome }}" required>
+                        <div class="form-text">Nome completo do cartão</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="cpf" class="form-label">CPF <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="cpf" name="cpf" value="{{ profissional.cpf }}" required maxlength="14">
+                        <div class="form-text">CPF será usado como login do cartão</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ profissional.email|default:'' }}">
+                        <div class="form-text">Email opcional. Se não informado, será gerado automaticamente.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="departamento" class="form-label">Departamento</label>
+                        <select class="form-select" id="departamento" name="departamento">
+                            <option value="">Selecione um departamento</option>
+                            {% for depto in departamentos %}
+                            <option value="{{ depto.id }}" {% if profissional.departamento == depto.id %}selected{% endif %}>
+                                {{ depto.nome }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            Departamento ao qual o cartão pertence
+                            {% if not departamentos %}
+                            <span class="text-warning">
+                                - <a href="{% url 'web-empresa:departamento-create' %}">Criar primeiro departamento</a>
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'web-empresa:profissional-detail' profissional.usuario %}" class="btn btn-secondary">
+                            <i class="bi bi-x"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check"></i> Salvar Alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Informações</h5>
+            </div>
+            <div class="card-body">
+                <p class="small mb-2"><strong>Sobre o CPF:</strong></p>
+                <p class="small text-muted mb-3">O CPF será automaticamente formatado ao salvar. O cartão usará o CPF (apenas números) como login.</p>
+                
+                <p class="small mb-2"><strong>Sobre o Email:</strong></p>
+                <p class="small text-muted mb-3">Se não informar um email, será gerado automaticamente no formato: cpf@empresa.com</p>
+                
+                <p class="small mb-2"><strong>Senha de Acesso:</strong></p>
+                <p class="small text-muted mb-0">A senha do cartão não pode ser alterada aqui. O cartão deve alterá-la no primeiro acesso ou solicitar redefinição.</p>
+            </div>
+        </div>
+
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Atenção</h5>
+            </div>
+            <div class="card-body">
+                <p class="small mb-0">Ao alterar o CPF, o cartão precisará usar o novo CPF para fazer login no sistema.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Máscara para CPF
+    document.getElementById('cpf').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 11) {
+            value = value.replace(/(\d{3})(\d)/, '$1.$2');
+            value = value.replace(/(\d{3})(\d)/, '$1.$2');
+            value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            e.target.value = value;
+        }
+    });
+</script>
+{% endblock %}

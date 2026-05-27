@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+
+{% block title %}Gerenciar {{ coleta.nome }} - ClickID{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="{% url 'web-empresa:dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'web-empresa:coletas-list' %}">Coletas</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'web-empresa:coleta-detail' coleta.id %}">{{ coleta.nome }}</a></li>
+                <li class="breadcrumb-item active">Gerenciar</li>
+            </ol>
+        </nav>
+        <h2><i class="bi bi-gear"></i> Gerenciar Pedido</h2>
+    </div>
+    <a href="{% url 'web-empresa:coleta-detail' coleta.id %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<div class="row">
+    <!-- Adicionar Profissionais -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-person-plus"></i> Adicionar Profissionais</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label class="form-label"><strong>Selecione a forma de adicionar profissionais:</strong></label>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="tipo_adicao" id="adicao_todos" value="todos" checked>
+                            <label class="form-check-label" for="adicao_todos">
+                                <strong>Todos os Profissionais Ativos</strong>
+                                <p class="text-muted small mb-0">Adiciona todos os profissionais ativos da empresa que ainda não estão no Pedido</p>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="tipo_adicao" id="adicao_departamentos" value="departamentos">
+                            <label class="form-check-label" for="adicao_departamentos">
+                                <strong>Por Departamentos</strong>
+                                <p class="text-muted small mb-0">Selecione departamentos específicos</p>
+                            </label>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="tipo_adicao" id="adicao_individuais" value="individuais">
+                            <label class="form-check-label" for="adicao_individuais">
+                                <strong>Profissionais Individuais</strong>
+                                <p class="text-muted small mb-0">Escolha profissionais um a um</p>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Seleção de Departamentos -->
+                    <div class="mb-4" id="departamentos_section" style="display: none;">
+                        <label class="form-label"><strong>Departamentos:</strong></label>
+                        {% if departamentos %}
+                        <div class="list-group">
+                            {% for dept in departamentos %}
+                            <label class="list-group-item">
+                                <input class="form-check-input me-2" type="checkbox" name="departamentos_selecionados" value="{{ dept.id }}">
+                                {{ dept.nome }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Nenhum departamento disponível
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Seleção Individual -->
+                    <div class="mb-4" id="individuais_section" style="display: none;">
+                        <label class="form-label"><strong>Profissionais:</strong></label>
+                        <input type="text" class="form-control mb-3" id="search_profissionais" placeholder="Buscar cartão por nome ou CPF...">
+                        
+                        {% if profissionais %}
+                        <div class="list-group" id="profissionais_list" style="max-height: 400px; overflow-y: auto;">
+                            {% for prof in profissionais %}
+                            <label class="list-group-item profissional-item">
+                                <input class="form-check-input me-2" type="checkbox" name="profissionais_selecionados" value="{{ prof.usuario }}">
+                                <div>
+                                    <strong>{{ prof.nome }}</strong><br>
+                                    <small class="text-muted">CPF: {{ prof.cpf }}</small>
+                                    {% if prof.departamento_nome %}
+                                        <span class="badge bg-info">{{ prof.departamento_nome }}</span>
+                                    {% endif %}
+                                </div>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Nenhum profissional disponível para adicionar
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-plus-circle"></i> Adicionar Profissionais Selecionados
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Ações em Massa -->
+        <div class="card">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0"><i class="bi bi-lightning"></i> Ações em Massa</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">Escolha profissionais um a um</p>
+                
+                <p class="small text-muted mb-3">Execute ações para múltiplos profissionais de uma vez</p>
+                
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="alert('Funcionalidade em desenvolvimento')">
+                        <i class="bi bi-envelope"></i> Reenviar Notificações para Todos Pendentes
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="mostrarRemocaoEmMassa()">
+                        <i class="bi bi-trash"></i> Remover Profissionais Selecionados
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumo da Coleta -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Resumo da Coleta</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Nome:</strong>
+                    <p class="mb-0">{{ coleta.nome }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Status:</strong><br>
+                    {% if coleta.status == 'em_andamento' %}
+                        <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> Em Andamento</span>
+                    {% elif coleta.status == 'concluida' %}
+                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Concluída</span>
+                    {% elif coleta.status == 'rascunho' %}
+                        <span class="badge bg-secondary"><i class="bi bi-file-earmark"></i> Rascunho</span>
+                    {% else %}
+                        <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Cancelada</span>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <strong>Modelo:</strong>
+                    <p class="mb-0">
+                        {% if coleta.modelo_nome %}
+                            <span class="badge bg-info">{{ coleta.modelo_nome }}</span>
+                        {% else %}
+                            <span class="text-muted">Dados Extras</span>
+                        {% endif %}
+                    </p>
+                </div>
+
+                <hr>
+
+                <div class="mb-3">
+                    <strong>Progresso:</strong>
+                    <div class="progress mb-2" style="height: 25px;">
+                        {% if coleta.total_profissionais > 0 %}
+                            {% widthratio coleta.total_concluidos coleta.total_profissionais 100 as percentual %}
+                            <div class="progress-bar 
+                                {% if percentual == 100 %}bg-success
+                                {% elif percentual >= 50 %}bg-warning
+                                {% else %}bg-info{% endif %}" 
+                                role="progressbar" 
+                                style="width: {{ percentual }}%;">
+                                {{ percentual }}%
+                            </div>
+                        {% else %}
+                            <div class="progress-bar bg-secondary" style="width: 100%;">0%</div>
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">{{ coleta.total_concluidos }} de {{ coleta.total_profissionais }} concluídos</small>
+                </div>
+
+                <hr>
+
+                <div class="d-grid gap-2">
+                    <a href="{% url 'web-empresa:coleta-detail' coleta.id %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-eye"></i> Ver Detalhes Completos
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-question-circle"></i> Ajuda</h5>
+            </div>
+            <div class="card-body">
+                <p class="small mb-2"><strong>Como adicionar profissionais:</strong></p>
+                <ol class="small">
+                    <li>Escolha a forma de adicionar (todos, departamentos ou individuais)</li>
+                    <li>Selecione os profissionais desejados</li>
+                    <li>Clique em "Adicionar Profissionais Selecionados"</li>
+                </ol>
+                
+                <p class="small mb-2 mt-3"><strong>Notificações:</strong></p>
+                <p class="small mb-0">Os profissionais adicionados receberão automaticamente uma notificação por e-mail com o link para preencher a coleta.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Controle de exibição das seções
+    document.querySelectorAll('input[name="tipo_adicao"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.getElementById('departamentos_section').style.display = 'none';
+            document.getElementById('individuais_section').style.display = 'none';
+            
+            if (this.value === 'departamentos') {
+                document.getElementById('departamentos_section').style.display = 'block';
+            } else if (this.value === 'individuais') {
+                document.getElementById('individuais_section').style.display = 'block';
+            }
+        });
+    });
+
+    // Busca de profissionais
+    const searchInput = document.getElementById('search_profissionais');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const items = document.querySelectorAll('.profissional-item');
+            
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(searchTerm) ? 'block' : 'none';
+            });
+        });
+    }
+    
+    function mostrarRemocaoEmMassa() {
+        const checkboxes = document.querySelectorAll('input[name="profissionais_selecionados"]:checked');
+        
+        if (checkboxes.length === 0) {
+            alert('Por favor, selecione pelo menos um profissional na seção "Cartões Individuais".');
+            return;
+        }
+        
+        if (confirm(`Tem certeza que deseja remover ${checkboxes.length} profissional(is) selecionado(s) deste pedido?`)) {
+            // Aqui você pode implementar a remoção em massa
+            alert('Funcionalidade de remoção em massa em desenvolvimento');
+        }
+    }
+</script>
+{% endblock %}

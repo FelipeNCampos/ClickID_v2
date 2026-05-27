@@ -1,0 +1,472 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ coleta.nome }} - ClickID{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="{% url 'web-gerente:dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'web-gerente:coletas-list' %}">Lista</a></li>
+                <li class="breadcrumb-item active">{{ coleta.nome }}</li>
+            </ol>
+        </nav>
+        <h2><i class="bi bi-collection"></i> {{ coleta.nome }}</h2>
+        <small class="text-muted">
+            <i class="bi bi-building me-1"></i>
+            {% if coleta.empresa_nome %}
+                {{ coleta.empresa_nome }}
+            {% elif coleta.empresa_razao_social %}
+                {{ coleta.empresa_razao_social }}
+            {% else %}
+                Empresa não identificada
+            {% endif %}
+        </small>
+    </div>
+    <div>
+        <a href="{% url 'web-gerente:coletas-list' %}" class="btn btn-secondary me-2">
+            <i class="bi bi-arrow-left"></i> Voltar para Lista
+        </a>
+        <a href="{% url 'web-gerente:coleta-manage' coleta.id %}" class="btn btn-primary">
+            <i class="bi bi-gear"></i> Gerenciar
+        </a>
+        <div class="btn-group" role="group">
+            {% if coleta.status == 'em_andamento' or coleta.status == 'concluida' %}
+            <div class="dropdown">
+                <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-download"></i> Exportar
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'web-gerente:coleta-exportar' coleta.id %}">
+                        <i class="bi bi-file-earmark-excel"></i> Resumo (Excel)
+                    </a></li>
+                    <li><a class="dropdown-item" href="{% url 'web-gerente:coleta-exportar-dados-textuais' coleta.id %}">
+                        <i class="bi bi-file-earmark-text"></i> Dados Textuais (Excel)
+                    </a></li>
+                    <li><a class="dropdown-item" href="{% url 'web-gerente:coleta-exportar-participantes' coleta.id %}">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Participantes (CSV)
+                    </a></li>
+                    <li><a class="dropdown-item" href="{% url 'web-gerente:coleta-exportar-midias' coleta.id %}">
+                        <i class="bi bi-file-earmark-zip"></i> Mídias (ZIP)
+                    </a></li>
+                </ul>
+            </div>
+            {% endif %}
+            {% if coleta.status == 'em_andamento' %}
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelarColetaModal">
+                <i class="bi bi-x-circle"></i> Cancelar
+            </button>
+            {% elif coleta.status == 'concluida' or coleta.status == 'cancelada' %}
+            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#refazerColetaModal">
+                <i class="bi bi-arrow-clockwise"></i> Refazer
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Informações Principais -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Informações da Coleta</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Empresa:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        <i class="bi bi-building me-1"></i>
+                        {% if coleta.empresa_nome %}
+                            {{ coleta.empresa_nome }}
+                        {% elif coleta.empresa_razao_social %}
+                            {{ coleta.empresa_razao_social }}
+                        {% else %}
+                            <span class="text-muted">Não identificada</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Nome da Coleta:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {{ coleta.nome }}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Descrição:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {% if coleta.descricao %}
+                            {{ coleta.descricao }}
+                        {% else %}
+                            <span class="text-muted">Não informada</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Modelo:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {% if coleta.modelo_nome %}
+                            <span class="badge bg-info">{{ coleta.modelo_nome }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Dados Extras (sem modelo)</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Tipo de Coleta:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {% if coleta.tipo_coleta == 'modelo_ativo' %}
+                            <span class="badge bg-primary">Modelo Ativo</span>
+                        {% elif coleta.tipo_coleta == 'dados_extras' %}
+                            <span class="badge bg-success">Dados Extras</span>
+                        {% else %}
+                            <span class="text-muted">Não definido</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Status:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {% if coleta.status == 'rascunho' %}
+                            <span class="badge bg-secondary">Rascunho</span>
+                        {% elif coleta.status == 'em_andamento' %}
+                            <span class="badge bg-primary">Em Andamento</span>
+                        {% elif coleta.status == 'concluida' %}
+                            <span class="badge bg-success">Concluída</span>
+                        {% elif coleta.status == 'cancelada' %}
+                            <span class="badge bg-danger">Cancelada</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Data de Criação:</strong>
+                    </div>
+                    <div class="col-md-8" id="dataCriacao">
+                        {% if coleta.criado_em %}
+                            <span class="data-formato" data-date="{{ coleta.criado_em }}"></span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if coleta.data_conclusao %}
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Data de Conclusão:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        <span class="data-formato" data-date="{{ coleta.data_conclusao }}"></span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Lista de Participantes -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-people"></i> Participantes</h5>
+            </div>
+            <div class="card-body">
+                {% if coleta.coleta_profissionais %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>CPF</th>
+                                <th>Status</th>
+                                <th>Data Resposta</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cp in coleta.coleta_profissionais %}
+                            <tr>
+                                <td>{{ cp.profissional.nome }}</td>
+                                <td>{{ cp.profissional.cpf }}</td>
+                                <td>
+                                    {% if cp.status == 'pendente' %}
+                                        <span class="badge bg-warning">Pendente</span>
+                                    {% elif cp.status == 'em_progresso' %}
+                                        <span class="badge bg-info">Em Progresso</span>
+                                    {% elif cp.status == 'concluido' %}
+                                        <span class="badge bg-success">Concluído</span>
+                                    {% elif cp.status == 'expirado' %}
+                                        <span class="badge bg-danger">Expirado</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if cp.data_resposta %}
+                                        <span class="data-formato" data-date="{{ cp.data_resposta }}"></span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        {% if cp.status == 'concluido' %}
+                                        <button type="button" class="btn btn-warning" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#modalRefazerIndividual"
+                                                onclick="setProfissionalId('{{ cp.profissional.usuario }}', '{{ cp.profissional.nome }}')">
+                                            <i class="bi bi-arrow-clockwise"></i> Refazer
+                                        </button>
+                                        {% endif %}
+                                        <button type="button" class="btn btn-danger" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#modalRemoverParticipante"
+                                                onclick="setRemoverProfissional('{{ cp.profissional.usuario }}', '{{ cp.profissional.nome }}')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">Nenhum participante adicionado ainda.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Estatísticas -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> Estatísticas</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6>Total de Participantes</h6>
+                    <h3>
+                        {% if estatisticas.total_profissionais %}
+                            {{ estatisticas.total_profissionais }}
+                        {% elif estatisticas.total_participantes %}
+                            {{ estatisticas.total_participantes }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </h3>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Progresso</h6>
+                    {% if estatisticas.total_profissionais and estatisticas.total_profissionais > 0 %}
+                        {% with percentual=estatisticas.percentual_conclusao|default:0|floatformat:0 concluidos=estatisticas.total_concluidos|default:0 %}
+                        <div class="progress mb-2" style="height: 30px;">
+                            {% if percentual == '100' %}
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: 100%;" 
+                                     aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
+                                    100%
+                                </div>
+                            {% elif percentual|add:0 >= 50 %}
+                                <div class="progress-bar bg-warning text-dark" role="progressbar" 
+                                     style="width: {{ percentual }}%;" 
+                                     aria-valuenow="{{ percentual }}" aria-valuemin="0" aria-valuemax="100">
+                                    {{ percentual }}%
+                                </div>
+                            {% else %}
+                                <div class="progress-bar bg-info" role="progressbar" 
+                                     style="width: {% if percentual|add:0 > 0 %}{{ percentual }}{% else %}5{% endif %}%;" 
+                                     aria-valuenow="{{ percentual }}" aria-valuemin="0" aria-valuemax="100">
+                                    {{ percentual }}%
+                                </div>
+                            {% endif %}
+                        </div>
+                        <p class="mb-0">
+                            <strong>{{ concluidos }}</strong> de 
+                            <strong>{{ estatisticas.total_profissionais }}</strong> concluídos
+                        </p>
+                        {% endwith %}
+                    {% else %}
+                        <p class="text-muted mb-0">Nenhum participante adicionado</p>
+                    {% endif %}
+                </div>
+                
+                <hr>
+                
+                <div class="mb-2">
+                    <span class="badge bg-warning">Pendentes:</span>
+                    <strong>{{ estatisticas.total_pendentes|default:0 }}</strong>
+                </div>
+                
+                <div class="mb-2">
+                    <span class="badge bg-info">Em Progresso:</span>
+                    <strong>{{ estatisticas.total_em_progresso|default:0 }}</strong>
+                </div>
+                
+                <div class="mb-2">
+                    <span class="badge bg-success">Concluídos:</span>
+                    <strong>{{ estatisticas.total_concluidos|default:0 }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cancelar Coleta -->
+<div class="modal fade" id="cancelarColetaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cancelar Coleta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja cancelar esta coleta?</p>
+                <p class="text-danger"><strong>Esta ação não pode ser desfeita!</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Não, voltar</button>
+                <form method="post" action="{% url 'web-gerente:coleta-cancelar' coleta.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Sim, cancelar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Refazer Coleta -->
+<div class="modal fade" id="refazerColetaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Refazer Coleta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Ao refazer esta coleta:</p>
+                <ul>
+                    <li>Todas as respostas enviadas serão <strong>apagadas permanentemente</strong></li>
+                    <li>Todos os participantes voltarão ao status <strong>Pendente</strong></li>
+                    <li>A coleta voltará ao status <strong>Em Andamento</strong></li>
+                    <li>Os profissionais poderão enviar novas respostas</li>
+                </ul>
+                <p class="text-warning"><strong>Esta ação não pode ser desfeita!</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="post" action="{% url 'web-gerente:coleta-refazer' coleta.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning">Sim, refazer coleta</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Refazer Individual -->
+<div class="modal fade" id="modalRefazerIndividual" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Refazer Formulário</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Permitir que <strong id="nomeRefazer"></strong> refaça o formulário?</p>
+                <ul>
+                    <li>As respostas atuais serão <strong>apagadas permanentemente</strong></li>
+                    <li>O participante voltará ao status <strong>Pendente</strong></li>
+                    <li>O profissional poderá enviar novas respostas</li>
+                </ul>
+                <p class="text-warning"><strong>Esta ação não pode ser desfeita!</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="post" action="{% url 'web-gerente:coleta-refazer-individual' coleta.id %}" id="formRefazerIndividual">
+                    {% csrf_token %}
+                    <input type="hidden" name="profissional_id" id="profissionalIdRefazer">
+                    <button type="submit" class="btn btn-warning">Sim, refazer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Remover Participante -->
+<div class="modal fade" id="modalRemoverParticipante" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Remover Participante</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja remover <strong id="nomeRemover"></strong> desta coleta?</p>
+                <p class="text-danger">Todas as respostas deste participante serão apagadas!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="post" action="{% url 'web-gerente:coleta-remover-participante' coleta.id %}" id="formRemoverParticipante">
+                    {% csrf_token %}
+                    <input type="hidden" name="profissional_id" id="profissionalIdRemover">
+                    <button type="submit" class="btn btn-danger">Sim, remover</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function setProfissionalId(profissionalId, nome) {
+    document.getElementById('profissionalIdRefazer').value = profissionalId;
+    document.getElementById('nomeRefazer').textContent = nome;
+}
+
+function setRemoverProfissional(profissionalId, nome) {
+    document.getElementById('profissionalIdRemover').value = profissionalId;
+    document.getElementById('nomeRemover').textContent = nome;
+}
+
+// Formatar todas as datas
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.data-formato').forEach(function(element) {
+        const dateStr = element.getAttribute('data-date');
+        if (dateStr && dateStr !== 'null') {
+            const date = new Date(dateStr);
+            if (!isNaN(date.getTime())) {
+                element.textContent = date.toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } else {
+                element.textContent = '-';
+            }
+        } else {
+            element.textContent = '-';
+        }
+    });
+});
+</script>
+{% endblock %}

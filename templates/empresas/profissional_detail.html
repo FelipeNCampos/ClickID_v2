@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ profissional.nome }} - ClickID{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="{% url 'web-empresa:dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'web-empresa:profissionais-list' %}">Cartões</a></li>
+                <li class="breadcrumb-item active">{{ profissional.nome }}</li>
+            </ol>
+        </nav>
+        <h2><i class="bi bi-person"></i> {{ profissional.nome }}</h2>
+    </div>
+    <div>
+        <a href="{% url 'web-empresa:profissional-edit' profissional.usuario %}" class="btn btn-warning">
+            <i class="bi bi-pencil"></i> Editar
+        </a>
+        <form method="POST" action="{% url 'web-empresa:profissional-toggle-active' profissional.usuario %}" class="d-inline">
+            {% csrf_token %}
+            {% if profissional.is_active %}
+            <button type="submit" class="btn btn-secondary" onclick="return confirm('Deseja desativar este profissional?')">
+                <i class="bi bi-x-circle"></i> Desativar
+            </button>
+            {% else %}
+            <button type="submit" class="btn btn-success" onclick="return confirm('Deseja ativar este profissional?')">
+                <i class="bi bi-check-circle"></i> Ativar
+            </button>
+            {% endif %}
+        </form>
+        <form method="POST" action="{% url 'web-empresa:profissional-delete' profissional.usuario %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger" onclick="return confirm('ATENÇÃO: Deseja realmente excluir este profissional? Esta ação não pode ser desfeita!')">
+                <i class="bi bi-trash"></i> Excluir
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Informações Básicas -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Informações do Cartão</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Nome Completo:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {{ profissional.nome }}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>CPF:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {{ profissional.cpf }}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Email:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {% if profissional.email %}
+                            {{ profissional.email }}
+                        {% else %}
+                            <span class="text-muted">Não informado</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Departamento:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {% if profissional.departamento_nome %}
+                            <span class="badge bg-info">{{ profissional.departamento_nome }}</span>
+                        {% else %}
+                            <span class="text-muted">Não definido</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Status:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {% if profissional.is_active %}
+                            <span class="badge bg-success">Ativo</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inativo</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Data de Cadastro:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {% if profissional.data_cadastro %}
+                            {{ profissional.data_cadastro|date:"d/m/Y H:i" }}
+                        {% else %}
+                            <span class="text-muted">Não disponível</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>Última Atualização:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {% if profissional.data_cadastro %}
+                            {{ profissional.data_cadastro|date:"d/m/Y H:i" }}
+                        {% else %}
+                            <span class="text-muted">Não disponível</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dados Adicionais -->
+        {% if profissional.dados_extras %}
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-database"></i> Dados Adicionais</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for campo, valor in profissional.dados_extras.items %}
+                    <div class="col-md-6 mb-3">
+                        <strong>{{ campo|title }}:</strong><br>
+                        <span class="text-muted">{{ valor }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="alert alert-info mb-0 mt-2">
+                    <small>
+                        <i class="bi bi-info-circle"></i> 
+                        Estes dados foram importados de arquivo Excel e podem ser usados para preencher automaticamente formulários.
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Histórico de Coletas -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Histórico de Pedidos</h5>
+            </div>
+            <div class="card-body">
+                {% if coletas %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Modelo</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for coleta in coletas %}
+                            <tr>
+                                <td>{{ coleta.created_at|date:"d/m/Y H:i" }}</td>
+                                <td>{{ coleta.modelo_nome|default:"N/A" }}</td>
+                                <td>
+                                    {% if coleta.status == 'pendente' %}
+                                        <span class="badge bg-warning">Pendente</span>
+                                    {% elif coleta.status == 'em_andamento' %}
+                                        <span class="badge bg-info">Em Andamento</span>
+                                    {% elif coleta.status == 'concluida' %}
+                                        <span class="badge bg-success">Concluída</span>
+                                    {% elif coleta.status == 'cancelada' %}
+                                        <span class="badge bg-danger">Cancelada</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'web-empresa:coleta-detail' coleta.id %}" class="btn btn-sm btn-info">
+                                        <i class="bi bi-eye"></i> Ver
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-clipboard-x text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-3 mb-0">Nenhum pedido registrado para este cartão</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar com Estatísticas -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Estatísticas</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Total de Pedidos:</span>
+                        <strong class="text-primary">{{ coletas|length }}</strong>
+                    </div>
+                    <div class="progress" style="height: 5px;">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: 100%"></div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Pedidos Concluídos:</span>
+                        <strong class="text-success">{% widthratio coletas|length 1 100 %}%</strong>
+                    </div>
+                    <div class="progress" style="height: 5px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: 50%"></div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Pedidos Pendentes:</span>
+                        <strong class="text-warning">0</strong>
+                    </div>
+                    <div class="progress" style="height: 5px;">
+                        <div class="progress-bar bg-warning" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-shield-check"></i> Acesso ao Sistema</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-2"><strong>Login:</strong></p>
+                <p class="text-muted small mb-3">O profissional pode fazer login usando seu CPF (sem pontos e traços)</p>
+                
+                <p class="mb-2"><strong>Senha Padrão:</strong></p>
+                <p class="text-muted small mb-0">A senha inicial é o CPF do profissional. Recomende a alteração no primeiro acesso.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-3">
+    <a href="{% url 'web-empresa:profissionais-list' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar para Lista
+    </a>
+</div>
+{% endblock %}

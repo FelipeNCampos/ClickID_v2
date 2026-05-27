@@ -1,0 +1,545 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ coleta.nome }} - ClickID{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="{% url 'web-empresa:dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'web-empresa:coletas-list' %}">Pedidos</a></li>
+                <li class="breadcrumb-item active">{{ coleta.nome }}</li>
+            </ol>
+        </nav>
+        <h2><i class="bi bi-collection"></i> {{ coleta.nome }}</h2>
+    </div>
+    <div>
+        <a href="{% url 'web-empresa:coletas-list' %}" class="btn btn-secondary me-2">
+            <i class="bi bi-arrow-left"></i> Voltar para Lista
+        </a>
+        <a href="{% url 'web-empresa:coleta-manage' coleta.id %}" class="btn btn-primary">
+            <i class="bi bi-gear"></i> Gerenciar
+        </a>
+        <div class="btn-group" role="group">
+            {% if coleta.status == 'em_andamento' %}
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#concluirColetaModal">
+                <i class="bi bi-check-circle"></i> Concluir
+            </button>
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelarColetaModal">
+                <i class="bi bi-x-circle"></i> Cancelar
+            </button>
+            {% elif coleta.status == 'concluida' or coleta.status == 'cancelada' %}
+            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#refazerColetaModal">
+                <i class="bi bi-arrow-clockwise"></i> Refazer
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Informações Principais -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Informações do Pedido</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Nome do Pedido:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {{ coleta.nome }}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Descrição:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {% if coleta.descricao %}
+                            {{ coleta.descricao }}
+                        {% else %}
+                            <span class="text-muted">Não informada</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Modelo:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {% if coleta.modelo_nome %}
+                            <span class="badge bg-info">{{ coleta.modelo_nome }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Dados Extras (sem modelo)</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Tipo de Pedido:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {% if coleta.tipo_coleta == 'modelo_ativo' %}
+                            <span class="badge bg-primary">Modelo Ativo</span>
+                        {% elif coleta.tipo_coleta == 'dados_extras' %}
+                            <span class="badge bg-success">Dados Extras</span>
+                        {% else %}
+                            <span class="text-muted">Não definido</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Status:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {% if coleta.status == 'em_andamento' %}
+                            <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> Em Andamento</span>
+                        {% elif coleta.status == 'concluida' %}
+                            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Concluída</span>
+                        {% elif coleta.status == 'rascunho' %}
+                            <span class="badge bg-secondary"><i class="bi bi-file-earmark"></i> Rascunho</span>
+                        {% else %}
+                            <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Cancelada</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Data de Início:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        {% if coleta.data_inicio %}
+                            <span class="data-formatada" data-date="{{ coleta.data_inicio }}">{{ coleta.data_inicio }}</span>
+                        {% else %}
+                            <span class="text-muted">Não iniciada</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if coleta.data_fim %}
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Data de Término:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        <span class="data-formatada" data-date="{{ coleta.data_fim }}">{{ coleta.data_fim }}</span>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>Criada em:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        <span class="data-formatada" data-date="{{ coleta.created_at }}">{{ coleta.created_at }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Profissionais -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-people"></i> Cartões no Pedido</h5>
+                <a href="{% url 'web-empresa:coleta-manage' coleta.id %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus-circle"></i> Adicionar Cartões
+                </a>
+            </div>
+            <div class="card-body">
+                {% if coleta.coleta_profissionais %}
+                <!-- Filtro de Status -->
+                <div class="mb-3">
+                    <label for="filtroStatus" class="form-label"><strong>Filtrar por Status:</strong></label>
+                    <select class="form-select" id="filtroStatus" onchange="filtrarProfissionais()">
+                        <option value="todos">Todos</option>
+                        <option value="pendente">Pendente</option>
+                        <option value="em_progresso">Em Progresso</option>
+                        <option value="concluido">Concluído</option>
+                        <option value="expirado">Expirado</option>
+                    </select>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover" id="tabelaProfissionais">
+                        <thead>
+                            <tr>
+                                <th>Cartão</th>
+                                <th>Status</th>
+                                <th>Conclusão</th>
+                                <th class="text-end">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cp in coleta.coleta_profissionais %}
+                            <tr class="profissional-row" data-status="{{ cp.status }}">
+                                <td>
+                                    <strong>{{ cp.profissional.nome }}</strong><br>
+                                    <small class="text-muted">{{ cp.profissional.cpf }}</small>
+                                </td>
+                                <td>
+                                    {% if cp.status == 'pendente' %}
+                                        <span class="badge bg-secondary"><i class="bi bi-clock"></i> Pendente</span>
+                                    {% elif cp.status == 'em_progresso' %}
+                                        <span class="badge bg-info"><i class="bi bi-hourglass-split"></i> Em Progresso</span>
+                                    {% elif cp.status == 'concluido' %}
+                                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Concluído</span>
+                                    {% elif cp.status == 'expirado' %}
+                                        <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Expirado</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if cp.data_conclusao %}
+                                        {{ cp.data_conclusao|date:"d/m/Y H:i" }}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if cp.status == 'concluido' %}
+                                    <a href="{% url 'web-empresa:participante-respostas' coleta.id cp.profissional.usuario %}" class="btn btn-sm btn-info">
+                                        <i class="bi bi-eye"></i> Ver Resposta
+                                    </a>
+                                    <button class="btn btn-sm btn-warning" onclick="confirmarRefazer('{{ cp.profissional.usuario }}', '{{ cp.profissional.nome }}')">
+                                        <i class="bi bi-arrow-clockwise"></i> Refazer
+                                    </button>
+                                    {% elif cp.status == 'pendente' %}
+                                    <button class="btn btn-sm btn-primary" onclick="alert('Reenvio de notificação em desenvolvimento')">
+                                        <i class="bi bi-envelope"></i> Reenviar
+                                    </button>
+                                    {% endif %}
+                                    <!-- Botão de remover participante -->
+                                    <button class="btn btn-sm btn-danger" onclick="confirmarRemocao('{{ cp.profissional.usuario }}', '{{ cp.profissional.nome }}')">
+                                        <i class="bi bi-trash"></i> Remover
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-3 mb-0">Nenhum cartão adicionado a este pedido</p>
+                    <button class="btn btn-primary mt-3" onclick="alert('Funcionalidade de adicionar cartões em desenvolvimento')">
+                        <i class="bi bi-plus-circle"></i> Adicionar Cartões
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar com Estatísticas -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Estatísticas</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-4 text-center">
+                    <h6 class="text-muted mb-2">Progresso Geral</h6>
+                    <div class="progress" style="height: 30px;">
+                        {% if coleta.total_profissionais > 0 %}
+                            {% widthratio coleta.total_concluidos coleta.total_profissionais 100 as percentual %}
+                            <div class="progress-bar 
+                                {% if percentual == 100 %}bg-success
+                                {% elif percentual >= 50 %}bg-warning
+                                {% else %}bg-info{% endif %}" 
+                                role="progressbar" 
+                                style="width: {{ percentual }}%;"
+                                aria-valuenow="{{ percentual }}" 
+                                aria-valuemin="0" 
+                                aria-valuemax="100">
+                                <strong>{{ percentual }}%</strong>
+                            </div>
+                        {% else %}
+                            <div class="progress-bar bg-secondary" role="progressbar" style="width: 100%;">
+                                <strong>0%</strong>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <p class="mt-2 mb-0">
+                        <strong>{{ coleta.total_concluidos }}</strong> de <strong>{{ coleta.total_profissionais }}</strong> concluídos
+                    </p>
+                </div>
+
+                <hr>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-people"></i> Total de Profissionais:</span>
+                        <strong class="text-primary">{{ coleta.total_profissionais }}</strong>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-check-circle text-success"></i> Concluídos:</span>
+                        <strong class="text-success">{{ coleta.total_concluidos }}</strong>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-hourglass-split text-info"></i> Em Progresso:</span>
+                        <strong class="text-info">{{ estatisticas.total_em_progresso|default:0 }}</strong>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-clock text-warning"></i> Pendentes:</span>
+                        <strong class="text-warning">{{ estatisticas.total_pendentes|default:0 }}</strong>
+                    </div>
+                </div>
+
+                {% if estatisticas.tempo_medio_conclusao %}
+                <hr>
+                <div class="mb-3">
+                    <div class="text-center">
+                        <small class="text-muted">Tempo Médio de Conclusão</small>
+                        <h4 class="mb-0">{{ estatisticas.tempo_medio_conclusao }}</h4>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-download"></i> Exportar Dados</h5>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-3">
+                    Exporte os dados coletados em diferentes formatos
+                </p>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'web-empresa:coleta-exportar' coleta.id %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Exportar Resumo (Excel)
+                    </a>
+                    <a href="{% url 'web-empresa:coleta-exportar-dados-textuais' coleta.id %}" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-file-earmark-excel"></i> Exportar Dados Textuais (Excel)
+                    </a>
+                    <a href="{% url 'web-empresa:coleta-exportar-participantes' coleta.id %}" class="btn btn-outline-info btn-sm">
+                        <i class="bi bi-file-earmark-text"></i> Exportar Participantes (CSV)
+                    </a>
+                    {% if coleta.include_foto or coleta.include_assinatura %}
+                    <a href="{% url 'web-empresa:coleta-exportar-midias' coleta.id %}" class="btn btn-outline-warning btn-sm">
+                        <i class="bi bi-file-earmark-zip"></i> Baixar Mídias (ZIP)
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-3">
+    <a href="{% url 'web-empresa:coletas-list' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar para Lista
+    </a>
+</div>
+
+<!-- Modal Concluir Coleta -->
+<div class="modal fade" id="concluirColetaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-check-circle"></i> Concluir Pedido</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja concluir este pedido?</p>
+                <p class="text-muted small mb-0">
+                    <i class="bi bi-info-circle"></i> Esta ação encerrará o pedido e impedirá novos preenchimentos.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="alert('Funcionalidade em desenvolvimento')">
+                    <i class="bi bi-check-circle"></i> Sim, Concluir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cancelar Coleta -->
+<div class="modal fade" id="cancelarColetaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-x-circle"></i> Cancelar Pedido</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja cancelar este pedido?</p>
+                <p class="text-danger small mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> Esta ação cancelará o pedido e impedirá novos preenchimentos.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Não</button>
+                <form method="POST" action="{% url 'web-empresa:coleta-cancelar' coleta.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-x-circle"></i> Sim, Cancelar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Remoção de Participante -->
+<div class="modal fade" id="modalRemoverParticipante" tabindex="-1" aria-labelledby="modalRemoverParticipanteLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalRemoverParticipanteLabel">
+                    <i class="bi bi-trash"></i> Remover Participante
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja remover <strong id="nomeParticipanteRemover"></strong> deste pedido?</p>
+                <p class="text-danger small mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> Esta ação removerá o participante e será registrada no log de auditoria.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{% url 'web-empresa:coleta-remover-participante' coleta.id %}" style="display: inline;" id="formRemoverParticipante">
+                    {% csrf_token %}
+                    <input type="hidden" name="profissional_id" id="profissionalIdRemover">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Sim, Remover
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Refazer Coleta -->
+<div class="modal fade" id="refazerColetaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="bi bi-arrow-clockwise"></i> Refazer Pedido</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja refazer este pedido?</p>
+                <p class="text-warning small mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> Esta ação irá apagar todas as respostas e permitir que os profissionais preencham novamente o formulário.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{% url 'web-empresa:coleta-refazer' coleta.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-arrow-clockwise"></i> Sim, Refazer
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Refazer Individual -->
+<div class="modal fade" id="modalRefazerIndividual" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="bi bi-arrow-clockwise"></i> Refazer Formulário
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja permitir que <strong id="nomeParticipanteRefazer"></strong> refaça o formulário?</p>
+                <p class="text-warning small mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> Esta ação irá apagar as respostas atuais deste profissional e permitir novo preenchimento.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{% url 'web-empresa:coleta-refazer-individual' coleta.id %}" style="display: inline;" id="formRefazerIndividual">
+                    {% csrf_token %}
+                    <input type="hidden" name="profissional_id" id="profissionalIdRefazer">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-arrow-clockwise"></i> Sim, Refazer
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Formatar datas ISO para formato brasileiro
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.data-formatada').forEach(function(element) {
+            const isoDate = element.getAttribute('data-date');
+            if (isoDate) {
+                const date = new Date(isoDate);
+                const formatted = date.toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                element.textContent = formatted;
+            }
+        });
+    });
+    
+    function filtrarProfissionais() {
+        const filtro = document.getElementById('filtroStatus').value;
+        const linhas = document.querySelectorAll('.profissional-row');
+        
+        linhas.forEach(linha => {
+            const status = linha.getAttribute('data-status');
+            
+            if (filtro === 'todos' || status === filtro) {
+                linha.style.display = '';
+            } else {
+                linha.style.display = 'none';
+            }
+        });
+    }
+    
+    function confirmarRemocao(profissionalId, nomeProfissional) {
+        document.getElementById('profissionalIdRemover').value = profissionalId;
+        document.getElementById('nomeParticipanteRemover').textContent = nomeProfissional;
+        
+        const modal = new bootstrap.Modal(document.getElementById('modalRemoverParticipante'));
+        modal.show();
+    }
+    
+    function confirmarRefazer(profissionalId, nomeProfissional) {
+        document.getElementById('profissionalIdRefazer').value = profissionalId;
+        document.getElementById('nomeParticipanteRefazer').textContent = nomeProfissional;
+        
+        const modal = new bootstrap.Modal(document.getElementById('modalRefazerIndividual'));
+        modal.show();
+    }
+</script>
+{% endblock %}

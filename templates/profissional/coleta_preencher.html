@@ -1,0 +1,1257 @@
+{% extends 'profissional/base_profissional.html' %}
+{% load static %}
+
+{% block title %}Preencher Pedido - ClickID{% endblock %}
+
+{% block extra_css %}
+<style>
+    .coleta-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .step-container {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .file-input-hidden {
+        display: none;
+    }
+    
+    .photo-upload-area {
+        text-align: center;
+        padding: 3rem;
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        background: #f8f9fa;
+        transition: all 0.3s;
+    }
+    
+    .photo-upload-area:hover {
+        border-color: #667eea;
+        background: #f0f4ff;
+    }
+    
+    .photo-preview-box {
+        display: none;
+        margin: 2rem auto;
+        padding: 20px;
+        border: 2px solid #dee2e6;
+        border-radius: 10px;
+        background: #f8f9fa;
+        text-align: center;
+        max-width: 400px;
+    }
+    
+    .photo-preview-box img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+    }
+    
+    .canvas-container {
+        border: 2px solid #dee2e6;
+        border-radius: 10px;
+        background: white;
+        touch-action: none;
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    #signature-canvas {
+        cursor: crosshair;
+        border-radius: 8px;
+        width: 100%;
+        display: block;
+    }
+    
+    .canvas-wrapper {
+        position: relative;
+    }
+    
+    .fullscreen-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+        transition: all 0.3s;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+        -webkit-user-select: none;
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .fullscreen-btn:hover,
+    .fullscreen-btn:active {
+        background: rgba(255, 255, 255, 1);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        transform: scale(1.05);
+    }
+    
+    .canvas-wrapper:-webkit-full-screen,
+    .canvas-wrapper:-moz-full-screen,
+    .canvas-wrapper:-ms-fullscreen,
+    .canvas-wrapper:fullscreen {
+        background: #f8f9fa;
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    
+    .canvas-wrapper:-webkit-full-screen .canvas-container,
+    .canvas-wrapper:-moz-full-screen .canvas-container,
+    .canvas-wrapper:-ms-fullscreen .canvas-container,
+    .canvas-wrapper:fullscreen .canvas-container {
+        width: 100%;
+        height: 100%;
+        max-width: 95vw;
+        max-height: 85vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        padding: 10px;
+    }
+    
+    .canvas-wrapper:-webkit-full-screen #signature-canvas,
+    .canvas-wrapper:-moz-full-screen #signature-canvas,
+    .canvas-wrapper:-ms-fullscreen #signature-canvas,
+    .canvas-wrapper:fullscreen #signature-canvas {
+        display: block;
+        margin: auto;
+    }
+    
+    .canvas-wrapper:-webkit-full-screen .fullscreen-btn,
+    .canvas-wrapper:-moz-full-screen .fullscreen-btn,
+    .canvas-wrapper:-ms-fullscreen .fullscreen-btn,
+    .canvas-wrapper:fullscreen .fullscreen-btn {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        font-size: 1.5rem;
+        padding: 15px 20px;
+        z-index: 10000;
+        background: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    
+    .orientation-warning {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        text-align: center;
+        padding: 2rem;
+    }
+    
+    .orientation-warning i {
+        font-size: 5rem;
+        animation: rotate 2s infinite;
+    }
+    
+    @keyframes rotate {
+        0%, 100% { transform: rotate(0deg); }
+        50% { transform: rotate(90deg); }
+    }
+    
+    @media (max-width: 768px) and (orientation: portrait) {
+        .orientation-warning {
+            display: flex;
+        }
+    }
+    
+    .btn-action {
+        padding: 1rem 2rem;
+        font-size: 1.1rem;
+        border-radius: 8px;
+        transition: all 0.3s;
+    }
+    
+    .btn-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="coleta-header">
+        <h2 class="mb-2"><i class="bi bi-clipboard-check"></i> {{ coleta_profissional.coleta.nome }}</h2>
+        <p class="mb-0">Enviando como: <strong>{{ profissional.nome|default:'Cartão' }}</strong></p>
+    </div>
+
+    <!-- Debug toggle (most useful during development) -->
+   
+        
+        <script type="application/json" id="campos-data">{{ campos_json|default:'[]'|safe }}</script>
+
+        <script>
+            try {
+                window.__coleta_meta = {
+                    coleta_id: "{{ coleta_profissional.coleta.id }}",
+                    include_foto: {{ coleta_profissional.coleta.include_foto|yesno:'true,false' }},
+                    include_assinatura: {{ coleta_profissional.coleta.include_assinatura|yesno:'true,false' }},
+                    include_dados: {{ coleta_profissional.coleta.include_dados|yesno:'true,false' }}
+                };
+            } catch (e) {
+                window.__coleta_meta = null;
+            }
+        </script>
+
+        <div id="form-meta" style="display:none"
+            data-include-foto="{{ coleta_profissional.coleta.include_foto|yesno:'1,0' }}"
+            data-include-assinatura="{{ coleta_profissional.coleta.include_assinatura|yesno:'1,0' }}"
+            data-include-dados="{{ coleta_profissional.coleta.include_dados|yesno:'1,0' }}">
+        </div>
+    
+    <!-- Step 1: Dados Adicionais (se houver campos) -->
+    {% if campos|length > 0 %}
+    <div class="step-container" id="step-dados">
+        <h4 class="mb-4"><i class="bi bi-pencil-square"></i> Dados Adicionais</h4>
+        <form id="form-dados">
+            {% for campo in campos %}
+            {% if campo.tipo_campo == 'texto' or campo.tipo_campo == 'texto_longo' %}
+            <div class="mb-3">
+                <label for="campo-{{ campo.id }}" class="form-label">
+                    {{ campo.nome }}
+                    {% if campo.obrigatorio %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {% if campo.tipo_campo == 'texto' %}
+                <input type="text" class="form-control" id="campo-{{ campo.id }}" name="{{ campo.id }}" {% if campo.obrigatorio %}required{% endif %}
+                    {% if 'nome' in campo.nome|lower %}value="{{ profissional.nome }}"{% endif %}>
+                {% elif campo.tipo_campo == 'texto_longo' %}
+                <textarea class="form-control" id="campo-{{ campo.id }}" name="{{ campo.id }}" rows="4" {% if campo.obrigatorio %}required{% endif %}>{% if 'nome' in campo.nome|lower %}{{ profissional.nome }}{% endif %}</textarea>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% endfor %}
+            <div class="text-center mt-4">
+                <button type="button" class="btn btn-success btn-sm" id="avancar-foto">
+                    Avançar <i class="bi bi-arrow-right"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+    <!-- Step 2: Foto -->
+    <div class="step-container" id="step-foto" style="display: none;">
+        <h4 class="mb-4"><i class="bi bi-camera-fill"></i> Enviar Foto</h4>
+        <div class="photo-upload-area" id="area-selecao">
+            <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #667eea;"></i>
+            <h5 class="mt-3">Selecione uma foto</h5>
+            <p class="text-muted">JPG ou PNG, até 10MB</p>
+            <input type="file" id="foto" class="file-input-hidden" accept="image/jpeg,image/png">
+            <label for="foto" class="btn btn-primary btn-action mt-3">
+                <i class="bi bi-image"></i> Selecionar Foto
+            </label>
+        </div>
+        <div class="photo-preview-box" id="preview-container">
+            <h5 class="mb-3">Preview da Foto</h5>
+            <img id="preview-foto" alt="Preview">
+        </div>
+        <div class="text-center mt-4" id="btn-avancar-foto" style="display: none;">
+            <button type="button" class="btn btn-success btn-action" id="avancar-assinatura">
+                Avançar <i class="bi bi-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+    <!-- Step 3: Assinatura -->
+    <div class="step-container" id="step-assinatura" style="display: none;">
+        <h4 class="mb-4"><i class="bi bi-pen-fill"></i> Capturar Assinatura</h4>
+        <!-- Alerta de orientação para mobile -->
+        <div class="orientation-warning" id="orientation-warning">
+            <div>
+                <i class="bi bi-phone-landscape"></i>
+                <h3 class="mt-3">Rotacione seu dispositivo</h3>
+                <p>Para melhor experiência de assinatura, por favor rotacione seu celular para o modo paisagem (horizontal).</p>
+            </div>
+        </div>
+        <div class="text-center mb-4">
+            <p class="text-muted">Desenhe sua assinatura abaixo</p>
+            <div class="canvas-wrapper" id="canvas-wrapper">
+                <button type="button" class="btn fullscreen-btn" id="fullscreen-btn" title="Tela cheia">
+                    <i class="bi bi-arrows-fullscreen"></i>
+                </button>
+                <div class="canvas-container">
+                    <canvas id="signature-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="text-center">
+            <button type="button" class="btn btn-warning btn-sm me-1" id="limpar-assinatura">
+                <i class="bi bi-eraser"></i> Limpar
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm me-1" id="voltar-foto">
+                <i class="bi bi-arrow-left"></i> Voltar
+            </button>
+            <button type="button" class="btn btn-success btn-sm" id="salvar-dados">
+                <i class="bi bi-check-circle"></i> Salvar
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Parse `campos` JSON once for the whole script and expose flags
+    const jsonElGlobal = document.getElementById('campos-data');
+    let camposData = [];
+    try {
+        if (jsonElGlobal) {
+            camposData = JSON.parse(jsonElGlobal.textContent || '[]') || [];
+        }
+    } catch (e) {
+        camposData = [];
+    }
+
+    let hasTextField = camposData.some(c => (c.tipo_campo === 'texto' || c.tipo_campo === 'texto_longo'));
+    let hasFotoField = camposData.some(c => (c.tipo_campo === 'foto' || (c.id && String(c.id).includes('foto'))));
+    let hasAssinaturaField = camposData.some(c => (c.tipo_campo === 'assinatura' || (c.id && String(c.id).includes('assinatura'))));
+
+    // Fallback: if backend explicitly set include_* flags, honor them
+    try {
+        const meta = document.getElementById('form-meta');
+        if (meta) {
+            const mi = meta.dataset.includeFoto === '1';
+            const ma = meta.dataset.includeAssinatura === '1';
+            // Only consider include_dados as a textual field when the Dados step
+            // is actually present in the DOM (template renders it only when there
+            // are real campos). This avoids marking hasTextField=true when there
+            // are no visible textual inputs.
+            const md = meta.dataset.includeDados === '1' && Boolean(document.getElementById('step-dados'));
+            hasFotoField = hasFotoField || mi;
+            hasAssinaturaField = hasAssinaturaField || ma;
+            hasTextField = hasTextField || md;
+        }
+    } catch (e) {}
+
+    // Additional fallback: if #form-meta is missing, use server-injected JS object
+    try {
+        if ((!document.getElementById('form-meta') || document.getElementById('form-meta').dataset === undefined) && window.__coleta_meta) {
+            const cm = window.__coleta_meta || {};
+            try { hasFotoField = hasFotoField || Boolean(cm.include_foto); } catch (e) {}
+            try { hasAssinaturaField = hasAssinaturaField || Boolean(cm.include_assinatura); } catch (e) {}
+            try { hasTextField = hasTextField || (Boolean(cm.include_dados) && Boolean(document.getElementById('step-dados'))); } catch (e) {}
+        }
+    } catch (e) {}
+
+    // Final fallback: if still no meta flags, try fetching coleta info from API using
+    // the coleta id parsed from the current URL. This runs in the browser and
+    // won't block server workers. It's used only when server-side injection failed.
+    try {
+        const missingMeta = !document.getElementById('form-meta') && !window.__coleta_meta;
+        const noCampos = Array.isArray(camposData) && camposData.length === 0;
+        if (missingMeta && noCampos) {
+            // Parse UUID from URL path segments (expects /profissional/coletas/<uuid>/preencher/)
+            try {
+                const parts = window.location.pathname.split('/').filter(Boolean);
+                // find 'coletas' segment and take the next part
+                const idx = parts.indexOf('coletas');
+                if (idx !== -1 && parts.length > idx + 1) {
+                    const coletaId = parts[idx + 1];
+                    if (coletaId) {
+                        fetch(`/api/v1/coletas/${coletaId}/`, { credentials: 'same-origin' })
+                            .then(r => r.ok ? r.json() : Promise.reject(r.status))
+                            .then(data => {
+                                try {
+                                    hasFotoField = hasFotoField || Boolean(data.include_foto);
+                                    hasAssinaturaField = hasAssinaturaField || Boolean(data.include_assinatura);
+                                    // Only treat include_dados as textual if we actually
+                                    // have any campos parsed on the page — otherwise
+                                    // allow auto-skip to choose photo/assinatura.
+                                    hasTextField = hasTextField || (Boolean(data.include_dados) && Array.isArray(camposData) && camposData.length > 0);
+                                    // Re-run the auto-skip logic to show the proper step
+                                    if (!hasTextField) {
+                                        const sd_auto = document.getElementById('step-dados');
+                                        const sf_auto = document.getElementById('step-foto');
+                                        const sa_auto = document.getElementById('step-assinatura');
+                                        if (sd_auto) sd_auto.style.display = 'none';
+                                        if (hasFotoField && sf_auto) {
+                                            sf_auto.style.display = 'block';
+                                        } else if (hasAssinaturaField && sa_auto) {
+                                            sa_auto.style.display = 'block';
+                                        } else if (sf_auto) {
+                                            sf_auto.style.display = 'block';
+                                        }
+                                    }
+                                } catch (e) {}
+                            })
+                            .catch(() => {
+                                // ignore failures
+                            });
+                    }
+                }
+            } catch (e) {}
+        }
+    } catch (e) {}
+
+    // If the coleta does not include a photo, hide the "Voltar" button
+    // in the assinatura step that would take the user back to the photo step.
+    try {
+        if (!hasFotoField) {
+            const voltarFotoBtnEarly = document.getElementById('voltar-foto');
+            if (voltarFotoBtnEarly) {
+                voltarFotoBtnEarly.style.display = 'none';
+            }
+        }
+    } catch (e) {
+        // ignore
+    }
+
+    // Auto-skip logic: if there are NO textual fields, show photo or assinatura
+    // even when the optional debug toggle button does not exist. This ensures
+    // the form is visible instead of rendering an apparently-blank page.
+    try {
+        if (!hasTextField) {
+            const sd_auto = document.getElementById('step-dados');
+            const sf_auto = document.getElementById('step-foto');
+            const sa_auto = document.getElementById('step-assinatura');
+
+            if (sd_auto) sd_auto.style.display = 'none';
+
+            if (hasFotoField && sf_auto) {
+                sf_auto.style.display = 'block';
+                try {
+                    const area = document.getElementById('area-selecao');
+                    if (area) {
+                        area.style.display = 'block';
+                        area.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    const lbl = document.querySelector("label[for='foto']");
+                    if (lbl) lbl.focus();
+                } catch (e) {}
+            } else if (hasAssinaturaField && sa_auto) {
+                sa_auto.style.display = 'block';
+                try {
+                    const canvasWrapper = document.getElementById('canvas-wrapper');
+                    if (canvasWrapper) canvasWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } catch (e) {}
+            } else {
+                // Fallback: if neither field explicitly present, show photo step
+                if (sf_auto) sf_auto.style.display = 'block';
+            }
+        }
+    } catch (e) {
+        // ignore any runtime issues in the auto-skip logic
+    }
+
+    // Debug panel: show serialized campos payload when toggled
+    const toggleDebugBtn = document.getElementById('toggle-debug-campos');
+    if (toggleDebugBtn) {
+        const panel = document.createElement('div');
+        panel.id = 'debug-campos-panel';
+        panel.style.display = 'none';
+        panel.style.marginTop = '1rem';
+        panel.innerHTML = `
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">Debug: campos</h6>
+                    <p id="debug-campos-count" class="small text-muted"></p>
+                    <pre id="debug-campos-json" style="max-height:300px;overflow:auto;background:#f8f9fa;padding:10px;border-radius:6px;"></pre>
+                </div>
+            </div>
+        `;
+        toggleDebugBtn.parentElement.insertAdjacentElement('afterend', panel);
+
+        // If there are no textual fields (only foto/assinatura), skip the Dados step
+        try {
+            if (!hasTextField) {
+                // Hide dados step
+                const sd = document.getElementById('step-dados');
+                if (sd) sd.style.display = 'none';
+
+                // Decide which step to show: photo first if present, else assinatura
+                const sf = document.getElementById('step-foto');
+                const sa = document.getElementById('step-assinatura');
+
+                if (hasFotoField && sf) {
+                    sf.style.display = 'block';
+                    try {
+                        const area = document.getElementById('area-selecao');
+                        if (area) {
+                            area.style.display = 'block';
+                            area.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                        const lbl = document.querySelector("label[for='foto']");
+                        if (lbl) lbl.focus();
+                    } catch (e) {}
+                } else if (hasAssinaturaField && sa) {
+                    sa.style.display = 'block';
+                    try {
+                        const canvasWrapper = document.getElementById('canvas-wrapper');
+                        if (canvasWrapper) {
+                            canvasWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    } catch (e) {}
+                } else {
+                    // Fallback: show photo step if nothing explicit found
+                    if (sf) {
+                        sf.style.display = 'block';
+                    }
+                }
+            }
+        } catch (e) {
+            // ignore
+        }
+
+        function renderDebug() {
+            const countEl = document.getElementById('debug-campos-count');
+            const jsonElOut = document.getElementById('debug-campos-json');
+            countEl.textContent = `campos_count=${camposData.length}`;
+            jsonElOut.textContent = JSON.stringify(camposData, null, 2);
+        }
+
+        toggleDebugBtn.addEventListener('click', function() {
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                toggleDebugBtn.textContent = 'Ocultar debug dos campos';
+                renderDebug();
+            } else {
+                panel.style.display = 'none';
+                toggleDebugBtn.textContent = 'Mostrar debug dos campos';
+            }
+        });
+        // Auto-open when query param debug_campos=1
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('debug_campos') === '1') {
+                toggleDebugBtn.click();
+            }
+        } catch (e) {}
+    }
+    // Elementos
+    const fotoInput = document.getElementById('foto');
+    const previewImg = document.getElementById('preview-foto');
+    const previewContainer = document.getElementById('preview-container');
+    const areaSelecao = document.getElementById('area-selecao');
+    const btnAvancarFoto = document.getElementById('btn-avancar-foto');
+    const btnAvancarDados = document.getElementById('avancar-foto');
+        // Avançar dos dados para a foto
+        if (btnAvancarDados) {
+            btnAvancarDados.addEventListener('click', function(e) {
+                e.preventDefault();
+                // Collect form values (same logic as form submit) so respostas are available later
+                try {
+                    const fdEl = document.getElementById('form-dados');
+                    if (fdEl) {
+                        const respostas = {};
+                        const formData = new FormData(fdEl);
+                        for (const [key, value] of formData.entries()) {
+                            if (respostas[key]) {
+                                if (!Array.isArray(respostas[key])) {
+                                    respostas[key] = [respostas[key]];
+                                }
+                                respostas[key].push(value);
+                            } else {
+                                respostas[key] = value;
+                            }
+                        }
+                        window.__respostasColeta = respostas;
+                    }
+                } catch (err) {
+                    console.error('Erro coletando dados do formulário:', err);
+                }
+
+                if (stepDados) stepDados.style.display = 'none';
+                if (stepFoto) stepFoto.style.display = 'block';
+            });
+        }
+    
+    const stepFoto = document.getElementById('step-foto');
+    const stepAssinatura = document.getElementById('step-assinatura');
+    const stepDados = document.getElementById('step-dados');
+    
+    const btnAvancarAssinatura = document.getElementById('avancar-assinatura');
+    const btnVoltarFoto = document.getElementById('voltar-foto');
+    const btnVoltarAssinatura = document.getElementById('voltar-assinatura');
+    const btnSalvarDados = document.getElementById('salvar-dados');
+    
+    const canvas = document.getElementById('signature-canvas');
+    const ctx = canvas.getContext('2d');
+    const btnLimpar = document.getElementById('limpar-assinatura');
+    
+    // Variáveis para foto e assinatura
+    let fotoData = null;
+    let assinaturaData = null;
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+    let assinaturaImageData = null; // Armazenar conteúdo do canvas
+    
+    // Configurar tamanho do canvas responsivo
+    function resizeCanvas() {
+        // Salvar conteúdo atual do canvas
+        if (canvas.width > 0 && canvas.height > 0) {
+            assinaturaImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        }
+        
+        const container = canvas.parentElement;
+        const containerWidth = container.clientWidth - 4; // Margem da borda
+        
+        // Verificar se está em fullscreen
+        const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || 
+                            document.mozFullScreenElement || document.msFullscreenElement;
+        
+        if (isFullscreen) {
+            // Fullscreen: usar quase toda tela
+            canvas.width = Math.floor(window.innerWidth * 0.95);
+            canvas.height = Math.floor(window.innerHeight * 0.85);
+        } else if (window.innerWidth > 768) {
+            // Desktop: canvas ocupando toda largura disponível
+            canvas.width = containerWidth;
+            canvas.height = Math.max(300, window.innerHeight - 450);
+        } else {
+            // Mobile: canvas deve ser praticamente quadrado e grande
+            if (window.matchMedia("(orientation: landscape)").matches) {
+                // Paisagem: usar toda largura disponível
+                canvas.width = containerWidth;
+                canvas.height = window.innerHeight - 250;
+            } else {
+                // Retrato: canvas grande ocupando quase todo espaço vertical
+                canvas.width = containerWidth;
+                canvas.height = Math.max(containerWidth * 0.6, window.innerHeight - 400);
+            }
+        }
+        
+        // Reconfigurar estilo do canvas após resize
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = isFullscreen ? 3 : 2; // Linha mais grossa em fullscreen
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        // Restaurar conteúdo se existir
+        if (assinaturaImageData) {
+            ctx.putImageData(assinaturaImageData, 0, 0);
+        }
+    }
+    
+    // Inicializar tamanho do canvas
+    resizeCanvas();
+    
+    // Atualizar tamanho ao redimensionar/rotacionar
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('orientationchange', function() {
+        setTimeout(resizeCanvas, 100);
+    });
+    
+    // === FULLSCREEN ===
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const canvasWrapper = document.getElementById('canvas-wrapper');
+    
+    function toggleFullscreen(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('Botão fullscreen clicado');
+        
+        const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || 
+                            document.mozFullScreenElement || document.msFullscreenElement ||
+                            document.webkitCurrentFullScreenElement;
+        
+        console.log('isFullscreen:', isFullscreen);
+        
+        if (!isFullscreen) {
+            // Entrar em fullscreen - tentar múltiplas APIs
+            const elem = canvasWrapper;
+            
+            console.log('Tentando entrar em fullscreen...');
+            
+            // Tentar API padrão
+            if (elem.requestFullscreen) {
+                console.log('Usando requestFullscreen');
+                elem.requestFullscreen().catch(err => {
+                    console.error('Erro requestFullscreen:', err);
+                    tryWebkitFullscreen();
+                });
+            } 
+            // WebKit (Safari/iOS)
+            else if (elem.webkitRequestFullscreen) {
+                console.log('Usando webkitRequestFullscreen');
+                elem.webkitRequestFullscreen();
+            }
+            else if (elem.webkitEnterFullscreen) {
+                console.log('Usando webkitEnterFullscreen');
+                elem.webkitEnterFullscreen();
+            }
+            // Mozilla
+            else if (elem.mozRequestFullScreen) {
+                console.log('Usando mozRequestFullScreen');
+                elem.mozRequestFullScreen();
+            }
+            // Microsoft
+            else if (elem.msRequestFullscreen) {
+                console.log('Usando msRequestFullscreen');
+                elem.msRequestFullscreen();
+            }
+            else {
+                console.warn('Nenhuma API de fullscreen disponível');
+                alert('Seu navegador não suporta modo tela cheia. Tente rotacionar o dispositivo para modo paisagem.');
+            }
+        } else {
+            console.log('Saindo do fullscreen...');
+            // Sair do fullscreen
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.webkitCancelFullScreen) {
+                document.webkitCancelFullScreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        }
+    }
+    
+    function tryWebkitFullscreen() {
+        const elem = canvasWrapper;
+        if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen();
+        } else if (elem.webkitEnterFullscreen) {
+            elem.webkitEnterFullscreen();
+        }
+    }
+    
+    // Adicionar eventos de click e touch
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+    fullscreenBtn.addEventListener('touchend', toggleFullscreen);
+    
+    // Prevenir comportamento padrão do touch
+    fullscreenBtn.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+    });
+    
+    // Atualizar ícone do botão quando entrar/sair do fullscreen
+    document.addEventListener('fullscreenchange', updateFullscreenButton);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+    document.addEventListener('mozfullscreenchange', updateFullscreenButton);
+    document.addEventListener('MSFullscreenChange', updateFullscreenButton);
+    document.addEventListener('webkitbeginfullscreen', updateFullscreenButton);
+    document.addEventListener('webkitendfullscreen', updateFullscreenButton);
+    
+    function updateFullscreenButton() {
+        const icon = fullscreenBtn.querySelector('i');
+        if (document.fullscreenElement || document.webkitFullscreenElement || 
+            document.mozFullScreenElement || document.msFullscreenElement) {
+            icon.className = 'bi bi-fullscreen-exit';
+            fullscreenBtn.title = 'Sair da tela cheia';
+            // Redimensionar canvas para fullscreen
+            setTimeout(resizeCanvas, 100);
+        } else {
+            icon.className = 'bi bi-arrows-fullscreen';
+            fullscreenBtn.title = 'Tela cheia';
+            // Redimensionar canvas para tamanho normal
+            setTimeout(resizeCanvas, 100);
+        }
+    }
+    
+    // === FOTO ===
+    // Função para comprimir imagem
+    function compressImage(dataUrl, maxWidth = 1200, quality = 0.85) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                
+                // Redimensionar se necessário
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Converter para JPEG com qualidade reduzida
+                const compressed = canvas.toDataURL('image/jpeg', quality);
+                console.log('Imagem comprimida:', {
+                    originalSize: (dataUrl.length / 1024).toFixed(2) + ' KB',
+                    compressedSize: (compressed.length / 1024).toFixed(2) + ' KB',
+                    reduction: ((1 - compressed.length / dataUrl.length) * 100).toFixed(1) + '%'
+                });
+                resolve(compressed);
+            };
+            img.src = dataUrl;
+        });
+    }
+    
+    fotoInput.addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            // Validar tamanho (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('Arquivo muito grande! Máximo 10MB');
+                fotoInput.value = '';
+                return;
+            }
+            
+            // Validar tipo
+            if (!file.type.match('image/jpeg') && !file.type.match('image/png')) {
+                alert('Formato inválido! Use JPG ou PNG');
+                fotoInput.value = '';
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = async function(event) {
+                // Comprimir a imagem antes de armazenar
+                try {
+                    fotoData = await compressImage(event.target.result);
+                } catch (e) {
+                    console.error('Erro ao comprimir imagem, usando original:', e);
+                    fotoData = event.target.result;
+                }
+                
+                previewImg.src = fotoData;
+                previewContainer.style.display = 'block';
+                btnAvancarFoto.style.display = 'block';
+                areaSelecao.style.display = 'none';
+                // If coleta only requires photo (no assinatura), make the advance button submit
+                try {
+                    const advanceBtn = document.getElementById('avancar-assinatura');
+                    if (advanceBtn && !hasAssinaturaField) {
+                        advanceBtn.textContent = 'Salvar';
+                        advanceBtn.classList.remove('btn-success');
+                        advanceBtn.classList.add('btn-primary');
+                    }
+                } catch (e) {}
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    // Avançar para assinatura OR submit immediately if no assinatura is required
+    btnAvancarAssinatura.addEventListener('click', function() {
+        if (hasAssinaturaField) {
+            stepFoto.style.display = 'none';
+            stepAssinatura.style.display = 'block';
+            // Garantir que o canvas seja redimensionado ao exibir
+            setTimeout(resizeCanvas, 100);
+        } else {
+            // Photo-only coleta: submit directly after confirming photo
+            if (!fotoData) {
+                alert('Selecione uma foto antes de continuar');
+                return;
+            }
+            // No assinatura expected
+            assinaturaData = null;
+            const respostasToSend = (window.__respostasColeta && Object.keys(window.__respostasColeta).length > 0) ? window.__respostasColeta : {};
+            enviarFormulario(respostasToSend);
+        }
+    });
+    
+    // Voltar behaviour: if photo field exists, go back to photo;
+    // if no photo but textual fields exist (signature-only with dados), go back to Dados.
+    btnVoltarFoto.addEventListener('click', function() {
+        try {
+            if (hasFotoField) {
+                stepAssinatura.style.display = 'none';
+                stepFoto.style.display = 'block';
+            } else if (hasTextField) {
+                // Go back to dados step (textual fields)
+                stepAssinatura.style.display = 'none';
+                const sd = document.getElementById('step-dados');
+                if (sd) sd.style.display = 'block';
+            } else {
+                // Fallback: if neither, just hide assinatura and show foto
+                stepAssinatura.style.display = 'none';
+                if (stepFoto) stepFoto.style.display = 'block';
+            }
+        } catch (e) {
+            // default fallback
+            stepAssinatura.style.display = 'none';
+            if (stepFoto) stepFoto.style.display = 'block';
+        }
+    });
+    
+    // === ASSINATURA ===
+    // Configurar canvas
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // Mouse events
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+    
+    // Touch events
+    canvas.addEventListener('touchstart', handleTouchStart);
+    canvas.addEventListener('touchmove', handleTouchMove);
+    canvas.addEventListener('touchend', stopDrawing);
+    
+    function startDrawing(e) {
+        isDrawing = true;
+        const rect = canvas.getBoundingClientRect();
+        lastX = e.clientX - rect.left;
+        lastY = e.clientY - rect.top;
+    }
+    
+    function draw(e) {
+        if (!isDrawing) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        
+        lastX = x;
+        lastY = y;
+    }
+    
+    function stopDrawing() {
+        isDrawing = false;
+    }
+    
+    function handleTouchStart(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        lastX = touch.clientX - rect.left;
+        lastY = touch.clientY - rect.top;
+        isDrawing = true;
+    }
+    
+    function handleTouchMove(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        
+        lastX = x;
+        lastY = y;
+    }
+    
+    // Limpar assinatura
+    btnLimpar.addEventListener('click', function() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        assinaturaData = null;
+    });
+    
+    // Salvar dados
+    btnSalvarDados.addEventListener('click', function() {
+        // Validar foto apenas se a coleta exige foto
+        if (hasFotoField && !fotoData) {
+            alert('Selecione uma foto antes de continuar');
+            return;
+        }
+        // Capturar assinatura only if required
+        assinaturaData = canvas.toDataURL('image/png');
+        if (hasAssinaturaField) {
+            // Verificar se canvas está vazio
+            const canvasData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const isEmpty = !canvasData.data.some(channel => channel !== 0);
+            if (isEmpty) {
+                alert('Desenhe sua assinatura antes de continuar');
+                return;
+            }
+        }
+        // Enviar formulário (finalizar coleta) - usa respostas armazenadas do passo Dados
+        const respostasToSend = (window.__respostasColeta && Object.keys(window.__respostasColeta).length > 0) ? window.__respostasColeta : {};
+        enviarFormulario(respostasToSend);
+    });
+    
+    // Voltar de dados para assinatura
+    if (btnVoltarAssinatura) {
+        btnVoltarAssinatura.addEventListener('click', function() {
+            stepDados.style.display = 'none';
+            stepAssinatura.style.display = 'block';
+        });
+    }
+    // Submit form dados -> armazenar respostas globalmente para o envio final
+    const formDados = document.getElementById('form-dados');
+    window.__respostasColeta = {};
+    if (formDados) {
+        formDados.addEventListener('submit', function(e) {
+            e.preventDefault();
+            // Coletar respostas
+            const respostas = {};
+            const formData = new FormData(formDados);
+            for (const [key, value] of formData.entries()) {
+                if (respostas[key]) {
+                    // Múltipla escolha
+                    if (!Array.isArray(respostas[key])) {
+                        respostas[key] = [respostas[key]];
+                    }
+                    respostas[key].push(value);
+                } else {
+                    respostas[key] = value;
+                }
+            }
+            // Armazenar para envio posterior
+            window.__respostasColeta = respostas;
+            // Avança para step de foto
+            stepDados.style.display = 'none';
+            stepFoto.style.display = 'block';
+        });
+    }
+    
+    // Função para enviar formulário
+    function enviarFormulario(respostas) {
+        const dados = {
+            foto: fotoData,
+            assinatura: assinaturaData,
+            respostas: respostas
+        };
+        
+        // Validar tamanho dos dados antes de enviar
+        const dadosJson = JSON.stringify(dados);
+        const tamanhoMB = (dadosJson.length / (1024 * 1024)).toFixed(2);
+        
+        // Log para debug
+        console.log('Enviando formulário:', {
+            temFoto: !!fotoData,
+            temAssinatura: !!assinaturaData,
+            numRespostas: Object.keys(respostas || {}).length,
+            tamanhoTotal: tamanhoMB + ' MB'
+        });
+        
+        // Avisar se os dados são muito grandes (> 8 MB)
+        if (tamanhoMB > 8) {
+            console.warn('Dados muito grandes:', tamanhoMB + ' MB');
+            if (!confirm('Os dados a serem enviados são grandes (' + tamanhoMB + ' MB). Isso pode demorar. Deseja continuar?')) {
+                return;
+            }
+        }
+        
+        // Mostrar loading
+        const loadingHtml = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Enviando...</span>
+                </div>
+                <h5 class="mt-3">Enviando formulário...</h5>
+                <p class="text-muted">Tamanho: ${tamanhoMB} MB</p>
+            </div>
+        `;
+        
+        document.querySelector('.container').innerHTML = loadingHtml;
+        
+        // Enviar via POST
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: dadosJson
+        })
+        .then(response => {
+            console.log('Resposta recebida:', response.status, response.statusText);
+            
+            // Tentar processar JSON mesmo em caso de erro
+            return response.json().then(data => {
+                if (response.ok) {
+                    return { success: true, data: data };
+                } else {
+                    // Resposta de erro com JSON
+                    const errorMsg = data.error || data.message || 'Erro desconhecido ao enviar formulário';
+                    console.error('Erro do servidor:', errorMsg);
+                    return { success: false, error: errorMsg, status: response.status };
+                }
+            }).catch(jsonError => {
+                // Não conseguiu fazer parse do JSON
+                console.error('Erro ao processar resposta JSON:', jsonError);
+                if (!response.ok) {
+                    return { 
+                        success: false, 
+                        error: `Erro HTTP ${response.status}: ${response.statusText}`,
+                        status: response.status
+                    };
+                }
+                throw new Error('Resposta inválida do servidor');
+            });
+        })
+        .then(result => {
+            if (result.success) {
+                const data = result.data;
+                // Mostrar mensagem clara ao profissional antes de redirecionar
+                try {
+                    const message = data && data.message ? data.message : 'Envio realizado com sucesso.';
+                    const successHtml = `
+                        <div class="text-center py-5">
+                            <div class="alert alert-success" role="alert">
+                                <h5 class="alert-heading">${message}</h5>
+                                <p>Você será redirecionado em instantes...</p>
+                            </div>
+                        </div>
+                    `;
+                    document.querySelector('.container').innerHTML = successHtml;
+
+                    // Redirecionar após breve atraso para que o usuário leia a mensagem
+                    setTimeout(function(){
+                        window.location.href = data.redirect_url || '{% url "profissional:dashboard" %}';
+                    }, 2500);
+                } catch (e) {
+                    // Fallback: redirect immediately
+                    window.location.href = data.redirect_url || '{% url "profissional:dashboard" %}';
+                }
+            } else {
+                // Mostrar erro específico do servidor
+                const errorHtml = `
+                    <div class="container py-5">
+                        <div class="alert alert-danger" role="alert">
+                            <h5 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Erro ao enviar formulário</h5>
+                            <p>${result.error}</p>
+                            <hr>
+                            <p class="mb-0">
+                                <button class="btn btn-primary" onclick="location.reload()">
+                                    <i class="bi bi-arrow-clockwise"></i> Tentar novamente
+                                </button>
+                            </p>
+                        </div>
+                    </div>
+                `;
+                document.querySelector('.container').innerHTML = errorHtml;
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao enviar formulário:', error);
+            const errorHtml = `
+                <div class="container py-5">
+                    <div class="alert alert-danger" role="alert">
+                        <h5 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Erro ao enviar formulário</h5>
+                        <p>${error.message || 'Erro desconhecido'}</p>
+                        <hr>
+                        <p class="mb-0">
+                            <button class="btn btn-primary" onclick="location.reload()">
+                                <i class="bi bi-arrow-clockwise"></i> Tentar novamente
+                            </button>
+                        </p>
+                    </div>
+                </div>
+            `;
+            document.querySelector('.container').innerHTML = errorHtml;
+        });
+    }
+    
+    // Interceptar cliques em links de logout para confirmar envio do formulário
+    try {
+        const logoutUrl = "{% url 'profissional:logout' %}";
+        // Criar modal de confirmação se não existir
+        let logoutModal = document.getElementById('logoutConfirmModal');
+        if (!logoutModal) {
+            const modalHtml = `
+            <div class="modal fade" id="logoutConfirmModal" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Confirmar saída</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <p>Deseja enviar o formulário antes de sair? Se sair sem enviar, seus dados poderão ser perdidos.</p>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="logoutCancelBtn">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="logoutNoSendBtn">Sair sem enviar</button>
+                    <button type="button" class="btn btn-primary" id="logoutSendBtn">Enviar e sair</button>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            logoutModal = document.getElementById('logoutConfirmModal');
+        }
+
+        const bsLogoutModal = new bootstrap.Modal(logoutModal, { backdrop: 'static' });
+
+        // Attach handlers
+        const logoutSendBtn = document.getElementById('logoutSendBtn');
+        const logoutNoSendBtn = document.getElementById('logoutNoSendBtn');
+
+        logoutSendBtn.addEventListener('click', function() {
+            // Submit the form and rely on the existing redirect (server logs out after successful submit)
+            try {
+                bsLogoutModal.hide();
+                const respostasToSend = (window.__respostasColeta && Object.keys(window.__respostasColeta).length > 0) ? window.__respostasColeta : {};
+                enviarFormulario(respostasToSend);
+            } catch (e) {
+                alert('Erro ao enviar formulário: ' + (e.message || e));
+            }
+        });
+
+        logoutNoSendBtn.addEventListener('click', function() {
+            // Navigate directly to logout URL
+            try {
+                window.location.href = logoutUrl;
+            } catch (e) {
+                alert('Erro ao sair: ' + (e.message || e));
+            }
+        });
+
+        // Find any logout links and intercept
+        const anchors = document.querySelectorAll('a[href]');
+        anchors.forEach(a => {
+            try {
+                const href = a.getAttribute('href');
+                // Compare raw href and absolute pathname
+                if (href === logoutUrl || href === ('/' + logoutUrl) || a.pathname === new URL(logoutUrl, window.location.origin).pathname) {
+                    a.addEventListener('click', function(ev) {
+                        ev.preventDefault();
+                        bsLogoutModal.show();
+                    });
+                }
+            } catch (e) {}
+        });
+    } catch (e) {
+        // ignore failures setting up logout intercept
+        console.error('Erro ao habilitar confirmação de logout:', e);
+    }
+});
+</script>
+{% endblock %}

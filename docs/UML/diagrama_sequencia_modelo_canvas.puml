@@ -1,0 +1,385 @@
+@startuml ClickID - Sequência: Criar Modelo Canvas e Gerar Formulário
+
+title Fluxo: Gerente Cria Modelo Canvas e Profissional Responde Formulário Gerado
+
+actor Gerente
+participant "Sistema Web" as Web
+participant "API Backend" as API
+participant "Canvas Editor" as Canvas
+participant "Banco de Dados" as DB
+participant "Preview Generator" as Preview
+actor Profissional
+
+== Fase 1: Gerente Acessa Empresa e Seus Modelos ==
+
+Gerente -> Web: Acessa perfil da empresa
+activate Web
+Web -> API: GET /api/empresas/{id}
+activate API
+API -> DB: Query empresa
+activate DB
+DB --> API: Dados da empresa
+deactivate DB
+API --> Web: Dados da empresa
+deactivate API
+Web --> Gerente: Exibe perfil com aba "Modelos"
+deactivate Web
+
+Gerente -> Web: Clica em aba "Modelos de Cartões"
+activate Web
+Web -> API: GET /api/empresas/{id}/modelos
+activate API
+API -> DB: Query modelos da empresa
+activate DB
+DB --> API: Lista de modelos (privados da empresa)
+deactivate DB
+API --> Web: Modelos da empresa
+deactivate API
+Web --> Gerente: Lista de modelos (isolados por empresa)
+deactivate Web
+
+== Fase 2: Criar Novo Modelo Canvas ==
+
+Gerente -> Web: Clica em "Novo Modelo"
+activate Web
+Web -> API: GET /api/modelos/template
+activate API
+API --> Web: Configurações de canvas (85mm x 54mm, 300dpi)
+deactivate API
+Web -> Canvas: Inicializar canvas com dimensões
+activate Canvas
+Canvas --> Web: Canvas pronto
+deactivate Canvas
+Web --> Gerente: Editor canvas carregado
+deactivate Web
+
+== Fase 3: Configurar Dimensões e Background ==
+
+Gerente -> Web: Define dimensões e background
+activate Web
+Web -> Canvas: Aplicar dimensões (85mm x 54mm)
+activate Canvas
+Canvas -> Canvas: Converter mm para pixels (300dpi)
+Canvas --> Web: Canvas redimensionado
+deactivate Canvas
+Gerente -> Web: Upload imagem de fundo
+Web -> API: POST /api/upload/background
+activate API
+API -> DB: Salvar URL da imagem
+activate DB
+DB --> API: URL salva
+deactivate DB
+API --> Web: URL do background
+deactivate API
+Web -> Canvas: Aplicar background
+activate Canvas
+Canvas --> Web: Background aplicado
+deactivate Canvas
+Web --> Gerente: Preview atualizado
+deactivate Web
+
+== Fase 4: Adicionar Campo "Nome" ==
+
+Gerente -> Web: Arrasta campo "Texto" para canvas
+activate Web
+Web -> Canvas: Adicionar campo texto na posição
+activate Canvas
+Canvas -> Canvas: Criar objeto campo (x:10mm, y:20mm)
+Canvas --> Web: Campo adicionado
+deactivate Canvas
+Web --> Gerente: Campo visível no canvas
+deactivate Web
+
+== Fase 5: Configurar Propriedades Visuais ==
+
+Gerente -> Web: Clica no campo para editar
+activate Web
+Web --> Gerente: Abre painel de propriedades
+deactivate Web
+
+Gerente -> Web: Configura propriedades visuais
+note right
+    - Nome do campo: "nome"
+    - Fonte: Arial
+    - Tamanho: 18pt
+    - Cor: #000000
+    - Negrito: true
+    - Alinhamento: esquerda
+    - Posição X: 10mm
+    - Posição Y: 20mm
+end note
+
+activate Web
+Web -> Canvas: Aplicar estilo
+activate Canvas
+Canvas -> Canvas: Renderizar campo com estilo
+Canvas --> Web: Preview atualizado
+deactivate Canvas
+Web --> Gerente: Campo estilizado visível
+deactivate Web
+
+== Fase 6: Configurar Pergunta do Formulário ==
+
+Gerente -> Web: Configura pergunta do formulário
+note right
+    - Pergunta: "Nome completo do profissional"
+    - Placeholder: "Digite seu nome completo"
+    - Obrigatório: true
+    - Tipo: TEXTO_CURTO
+    - Validação: mínimo 3 caracteres
+end note
+
+activate Web
+Web -> API: PATCH /api/modelos/{id}/campos/{campo_id}
+activate API
+API -> DB: UPDATE campo_cartao
+activate DB
+DB --> API: Campo atualizado
+deactivate DB
+API --> Web: Configuração salva
+deactivate API
+Web --> Gerente: "Configuração salva"
+deactivate Web
+
+== Fase 7: Adicionar Campo Foto ==
+
+Gerente -> Web: Arrasta campo "Foto" para canvas
+activate Web
+Web -> Canvas: Adicionar campo foto
+activate Canvas
+Canvas -> Canvas: Criar área de foto (x:60mm, y:10mm, 25mm x 30mm)
+Canvas --> Web: Campo foto adicionado
+deactivate Canvas
+Web --> Gerente: Área de foto visível
+deactivate Web
+
+Gerente -> Web: Configura campo foto
+note right
+    Configurações Visuais:
+    - Posição X: 60mm, Y: 10mm
+    - Largura: 25mm
+    - Altura: 30mm
+    - Borda: 1px solid #000
+    
+    Configurações Formulário:
+    - Pergunta: "Envie sua foto 3x4 profissional"
+    - Formato aceito: JPG, PNG
+    - Tamanho máximo: 5MB
+    - Resolução mínima: 300x400px
+end note
+
+activate Web
+Web -> API: PATCH /api/modelos/{id}/campos/{campo_id}
+activate API
+API -> DB: UPDATE campo_cartao
+activate DB
+DB --> API: Campo foto configurado
+deactivate DB
+API --> Web: Salvo
+deactivate API
+Web --> Gerente: "Campo configurado"
+deactivate Web
+
+== Fase 8: Adicionar Campo Assinatura ==
+
+Gerente -> Web: Arrasta campo "Assinatura" para canvas
+activate Web
+Web -> Canvas: Adicionar área de assinatura
+activate Canvas
+Canvas -> Canvas: Criar área (x:10mm, y:40mm, 40mm x 10mm)
+Canvas --> Web: Campo assinatura adicionado
+deactivate Canvas
+
+Gerente -> Web: Configura assinatura
+note right
+    Visual:
+    - Posição X: 10mm, Y: 40mm
+    - Largura: 40mm, Altura: 10mm
+    - Linha inferior: true
+    
+    Formulário:
+    - Pergunta: "Assinatura digital"
+    - Obrigatório: true
+end note
+
+Web -> API: PATCH /api/modelos/{id}/campos/{campo_id}
+activate API
+API -> DB: UPDATE campo_cartao
+activate DB
+DB --> API: Campo salvo
+deactivate DB
+API --> Web: Configurado
+deactivate API
+Web --> Gerente: "Campo configurado"
+deactivate Web
+
+== Fase 9: Gerar Preview e Salvar Modelo ==
+
+Gerente -> Web: Clica em "Gerar Preview"
+activate Web
+Web -> Preview: Renderizar cartão completo
+activate Preview
+Preview -> Preview: Aplicar todos campos com estilos
+Preview -> Preview: Gerar imagem PNG (alta resolução)
+Preview --> Web: Imagem do preview
+deactivate Preview
+Web --> Gerente: Exibe preview do cartão
+deactivate Web
+
+Gerente -> Web: Clica em "Salvar Modelo"
+activate Web
+Web -> API: PUT /api/modelos/{id}
+activate API
+API -> DB: UPDATE modelo_cartao SET is_active=true
+activate DB
+DB --> API: Modelo salvo
+deactivate DB
+API -> DB: INSERT log_auditoria
+activate DB
+DB --> API: Log registrado
+deactivate DB
+API --> Web: Modelo salvo com sucesso
+deactivate API
+Web --> Gerente: "Modelo ativo e disponível para coletas"
+deactivate Web
+
+== Fase 10: Gerente Inicia Coleta com Modelo ==
+
+Gerente -> Web: Inicia nova coleta
+activate Web
+Web -> API: GET /api/empresas/{id}/modelos/ativos
+activate API
+API -> DB: Query modelos ativos da empresa
+activate DB
+DB --> API: Lista de modelos ativos
+deactivate DB
+API --> Web: Modelos disponíveis
+deactivate API
+Web --> Gerente: Seleciona modelo criado
+deactivate Web
+
+Gerente -> Web: Seleciona modelo e profissionais
+Web -> API: POST /api/coletas/
+activate API
+API -> DB: INSERT coleta (com modelo_id)
+activate DB
+DB --> API: Coleta criada
+deactivate DB
+API --> Web: Coleta iniciada
+deactivate API
+Web --> Gerente: "Coleta iniciada"
+deactivate Web
+
+== Fase 11: Sistema Gera Formulário Automaticamente ==
+
+API -> DB: Query campos do modelo
+activate DB
+DB --> API: Lista de campos com configurações
+deactivate DB
+
+loop Para cada campo do modelo
+    API -> API: Gerar pergunta do formulário
+    note right
+        Campo "nome":
+        - Tipo: text_input
+        - Label: "Nome completo do profissional"
+        - Placeholder: "Digite seu nome completo"
+        - Required: true
+        - Validation: min_length=3
+    end note
+    
+    API -> API: Gerar pergunta foto
+    note right
+        Campo "foto":
+        - Tipo: file_upload
+        - Label: "Envie sua foto 3x4 profissional"
+        - Accept: image/jpeg, image/png
+        - Max_size: 5MB
+        - Required: true
+    end note
+end
+
+API -> DB: Estrutura do formulário gerada
+activate DB
+DB --> API: Confirmação
+deactivate DB
+
+== Fase 12: Profissional Acessa e Responde Formulário ==
+
+Profissional -> Web: Acessa link da coleta
+activate Web
+Web -> API: GET /api/coletas/{id}/formulario
+activate API
+API -> DB: Query campos do modelo
+activate DB
+DB --> API: Estrutura do formulário
+deactivate DB
+API --> Web: Formulário gerado dinamicamente
+deactivate API
+Web --> Profissional: Exibe formulário com perguntas
+deactivate Web
+
+note right of Profissional
+    Formulário gerado automaticamente:
+    1. "Nome completo do profissional"
+       [___________________________]
+    
+    2. "Envie sua foto 3x4 profissional"
+       [Upload de arquivo]
+    
+    3. "Assinatura digital"
+       [Canvas para assinar]
+end note
+
+Profissional -> Web: Preenche "João Silva"
+Profissional -> Web: Upload foto
+Profissional -> Web: Assina digitalmente
+Profissional -> Web: Clica em "Finalizar"
+
+activate Web
+Web -> API: POST /api/coletas/{id}/resposta
+activate API
+API -> DB: INSERT resposta_coleta
+activate DB
+DB --> API: Resposta salva
+deactivate DB
+API --> Web: Formulário concluído
+deactivate API
+Web --> Profissional: "Obrigado! Formulário enviado"
+deactivate Web
+
+== Fase 13: Sistema Gera Cartão com Dados ==
+
+API -> Preview: Gerar cartão final
+activate Preview
+Preview -> DB: Query modelo + respostas
+activate DB
+DB --> Preview: Modelo canvas + dados
+deactivate DB
+
+Preview -> Preview: Aplicar dados nos campos
+note right
+    - Campo "nome" (x:10mm, y:20mm):
+      Renderizar "João Silva" 
+      Arial, 18pt, negrito, preto
+    
+    - Campo "foto" (x:60mm, y:10mm):
+      Inserir imagem do upload
+      25mm x 30mm
+    
+    - Campo "assinatura" (x:10mm, y:40mm):
+      Inserir assinatura digital
+      40mm x 10mm
+end note
+
+Preview -> Preview: Gerar cartão final (PNG/PDF)
+Preview -> DB: Salvar cartão gerado
+activate DB
+DB --> Preview: URL do cartão
+deactivate DB
+Preview --> API: Cartão pronto
+deactivate Preview
+API --> Gerente: Notificação: cartão gerado
+deactivate API
+
+@enduml

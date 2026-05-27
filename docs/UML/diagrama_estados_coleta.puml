@@ -1,0 +1,62 @@
+@startuml ClickID - Diagrama de Estados: Coleta
+
+title Máquina de Estados - Coleta
+
+[*] --> Rascunho : Gerente/Empresa cria coleta
+
+state Rascunho {
+    Rascunho : Coleta sendo configurada
+    Rascunho : - Modelo selecionado
+    Rascunho : - Profissionais sendo adicionados
+    Rascunho : - Configurações ajustáveis
+}
+
+Rascunho --> EmAndamento : Iniciar coleta\n[Profissionais > 0]
+Rascunho --> [*] : Cancelar\n[Descartar rascunho]
+
+state EmAndamento {
+    EmAndamento : Coleta ativa
+    EmAndamento : - Profissionais recebem notificações
+    EmAndamento : - Formulários disponíveis
+    EmAndamento : - Percentual calculado em tempo real
+    EmAndamento : entry / enviar_notificacoes()
+    EmAndamento : do / calcular_percentual()
+}
+
+EmAndamento --> Concluida : Todos profissionais finalizaram
+EmAndamento --> Concluida : Gerente/Empresa finaliza manualmente
+EmAndamento --> Cancelada : Cancelar coleta
+EmAndamento --> EmAndamento : Adicionar profissionais\nReenviar notificações
+
+state Concluida {
+    Concluida : Coleta finalizada
+    Concluida : - Todos dados disponíveis
+    Concluida : - Relatórios podem ser baixados
+    Concluida : - Não aceita mais respostas
+    Concluida : entry / registrar_conclusao()
+}
+
+state Cancelada {
+    Cancelada : Coleta cancelada
+    Cancelada : - Respostas parciais mantidas
+    Cancelada : - Profissionais não podem mais acessar
+    Cancelada : - Pode ser reaberta
+    Cancelada : entry / notificar_cancelamento()
+}
+
+Concluida --> EmAndamento : Reabrir coleta\n[Permitir mais respostas]
+Cancelada --> EmAndamento : Reabrir coleta
+Concluida --> [*]
+Cancelada --> [*]
+
+note right of EmAndamento
+    Transição automática para "Concluída"
+    quando percentual = 100%
+end note
+
+note right of Cancelada
+    Dados parciais são preservados
+    para análise posterior
+end note
+
+@enduml

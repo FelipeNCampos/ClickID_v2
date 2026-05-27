@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Modelos - {{ empresa.nome_fantasia }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mt-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:empresas-list' %}">Empresas</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:empresa-detail' empresa.id %}">{{ empresa.nome_fantasia }}</a></li>
+            <li class="breadcrumb-item active">Modelos</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Modelos de Cartão</h1>
+            <p class="text-muted">{{ empresa.nome_fantasia }}</p>
+        </div>
+        <a href="{% url 'web-gerente:modelo-create' empresa.id %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Novo Modelo
+        </a>
+    </div>
+
+    <!-- Mensagens -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Lista de Modelos -->
+    {% if modelos %}
+        <div class="row">
+            {% for modelo in modelos %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h5 class="card-title mb-0">{{ modelo.nome }}</h5>
+                                {% if modelo.is_active %}
+                                    <span class="badge bg-success">Ativo</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inativo</span>
+                                {% endif %}
+                            </div>
+                            
+                            {% if modelo.descricao %}
+                                <p class="card-text text-muted small">{{ modelo.descricao|truncatewords:20 }}</p>
+                            {% endif %}
+                            
+                            <div class="text-muted small mb-3">
+                                <i class="bi bi-rulers me-1"></i>
+                                {{ modelo.largura_mm }}mm × {{ modelo.altura_mm }}mm
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'web-gerente:modelo-detail' empresa.id modelo.id %}" 
+                                   class="btn btn-sm btn-outline-primary flex-fill">
+                                    <i class="bi bi-eye me-1"></i>Ver
+                                </a>
+                                <a href="{% url 'web-gerente:modelo-edit' empresa.id modelo.id %}" 
+                                   class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                
+                                <!-- Toggle Active -->
+                                <form method="post" action="{% url 'web-gerente:modelo-toggle-active' empresa.id modelo.id %}" 
+                                      style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-{% if modelo.is_active %}warning{% else %}success{% endif %}"
+                                            title="{% if modelo.is_active %}Desativar modelo{% else %}Definir como modelo ativo (único){% endif %}"
+                                            onclick="return confirm('{% if modelo.is_active %}Desativar este modelo? A empresa ficará sem modelo ativo.{% else %}Ativar este modelo? Todos os outros modelos serão desativados automaticamente.{% endif %}')">
+                                        <i class="bi bi-{% if modelo.is_active %}x-circle{% else %}check-circle{% endif %}"></i>
+                                    </button>
+                                </form>
+                                
+                                <!-- Delete -->
+                                <form method="post" action="{% url 'web-gerente:modelo-delete' empresa.id modelo.id %}" 
+                                      style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('⚠️ ATENÇÃO!\n\nTem certeza que deseja excluir este modelo?\n\nEsta ação NÃO pode ser desfeita!')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        {% if modelo.data_cadastro %}
+                        <div class="card-footer text-muted small">
+                            <i class="bi bi-calendar me-1"></i>
+                            Criado em {{ modelo.data_cadastro|date:"d/m/Y H:i" }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted mb-3"></i>
+                <h5 class="text-muted">Nenhum modelo cadastrado</h5>
+                <p class="text-muted">Crie o primeiro modelo de cartão para esta empresa.</p>
+                <a href="{% url 'web-gerente:modelo-create' empresa.id %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>Criar Primeiro Modelo
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

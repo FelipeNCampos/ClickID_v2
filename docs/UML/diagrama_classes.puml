@@ -1,0 +1,420 @@
+@startuml ClickID - Diagrama de Classes
+
+' ==================== CONFIGURAÇÕES ====================
+skinparam classAttributeIconSize 0
+skinparam class {
+    BackgroundColor<<Entity>> LightBlue
+    BackgroundColor<<Enum>> LightYellow
+    BackgroundColor<<Service>> LightGreen
+    BorderColor Black
+    ArrowColor Black
+}
+
+' ==================== AUTENTICAÇÃO E USUÁRIOS ====================
+
+abstract class Usuario {
+    # id: UUID
+    # created_at: DateTime
+    # updated_at: DateTime
+    # email: EmailField
+    # password_hash: String
+    # is_active: Boolean
+    # last_login: DateTime
+    --
+    + authenticate(): Boolean
+    + reset_password(): void
+    + change_password(): void
+}
+
+class Gerente {
+    - nome: String
+    - cpf: String {unique}
+    - telefone: String
+    --
+    + cadastrar_empresa(): Empresa
+    + cadastrar_gerente(): Gerente
+    + iniciar_coleta(): Coleta
+    + visualizar_dashboard(): DashboardData
+    + gerenciar_modelos(): List<ModeloCartao>
+    + exportar_logs(): File
+}
+
+class Empresa {
+    - razao_social: String
+    - nome_fantasia: String
+    - cnpj: String {unique}
+    - endereco: String
+    - telefone: String
+    - logo: ImageField
+    - url_personalizada: String {unique}
+    - data_cadastro: DateTime
+    --
+    + cadastrar_profissional(): Profissional
+    + importar_profissionais(): List<Profissional>
+    + iniciar_coleta(): Coleta
+    + criar_departamento(): Departamento
+    + baixar_relatorio(): File
+    + visualizar_dashboard(): DashboardData
+}
+
+class Profissional {
+    - nome: String
+    - cpf: String {unique}
+    - email: String
+    - senha_alterada: Boolean
+    - data_primeiro_login: DateTime
+    --
+    + realizar_primeiro_login(): Boolean
+    + alterar_senha(): void
+    + preencher_formulario(): RespostaColeta
+    + capturar_foto(): void
+    + assinar(): void
+    + visualizar_pendencias(): List<Coleta>
+}
+
+' ==================== ORGANIZAÇÃO ====================
+
+class Departamento {
+    - id: UUID
+    - nome: String
+    - descricao: String
+    - created_at: DateTime
+    --
+    + adicionar_profissional(): void
+    + remover_profissional(): void
+    + listar_profissionais(): List<Profissional>
+}
+
+' ==================== MODELOS E COLETAS ====================
+
+class ModeloCartao {
+    - id: UUID
+    - nome: String
+    - descricao: String
+    - is_active: Boolean
+    - largura_mm: Float
+    - altura_mm: Float
+    - dpi: Integer
+    - background_image: ImageField
+    - background_color: String
+    - created_at: DateTime
+    - updated_at: DateTime
+    --
+    + adicionar_campo(): CampoCartao
+    + remover_campo(): void
+    + ativar(): void
+    + desativar(): void
+    + clonar(): ModeloCartao
+    + exportar_preview(): ImageField
+    + validar_dimensoes(): Boolean
+}
+
+class CampoCartao {
+    - id: UUID
+    - nome_campo: String
+    - tipo: TipoCampo
+    - obrigatorio: Boolean
+    - ordem: Integer
+    - opcoes: JSON
+    - validacao_regex: String
+    ' Configurações do Formulário
+    - pergunta_formulario: String
+    - placeholder: String
+    - texto_ajuda: String
+    ' Configurações Visuais no Cartão
+    - posicao_x: Float
+    - posicao_y: Float
+    - largura: Float
+    - altura: Float
+    - fonte: String
+    - tamanho_fonte: Integer
+    - cor_texto: String
+    - alinhamento: String
+    - negrito: Boolean
+    - italico: Boolean
+    - sublinhado: Boolean
+    - rotacao: Float
+    --
+    + validar(): Boolean
+    + aplicar_estilo(): JSON
+    + calcular_posicao_absoluta(): Point
+}
+
+enum TipoCampo {
+    TEXTO_CURTO
+    TEXTO_LONGO
+    EMAIL
+    CPF
+    TELEFONE
+    DATA
+    NUMERO
+    FOTO
+    ASSINATURA
+    SELECAO_UNICA
+    SELECAO_MULTIPLA
+    CODIGO_BARRAS
+    QR_CODE
+    IMAGEM_ESTATICA
+}
+
+class Coleta {
+    - id: UUID
+    - nome: String
+    - status: StatusColeta
+    - data_inicio: DateTime
+    - data_fim: DateTime
+    - prazo: DateTime
+    - include_foto: Boolean
+    - include_assinatura: Boolean
+    - include_dados: Boolean
+    - total_profissionais: Integer
+    - total_concluidos: Integer
+    --
+    + calcular_percentual(): Float
+    + adicionar_profissional(): void
+    + remover_profissional(): void
+    + cancelar(): void
+    + finalizar(): void
+    + reabrir(): void
+    + exportar_dados(): File
+    + exportar_midias(): File
+}
+
+enum StatusColeta {
+    RASCUNHO
+    EM_ANDAMENTO
+    CONCLUIDA
+    CANCELADA
+}
+
+class ColetaProfissional {
+    - id: UUID
+    - status: StatusPreenchimento
+    - data_inicio: DateTime
+    - data_conclusao: DateTime
+    - ip_address: String
+    --
+    + iniciar(): void
+    + salvar_rascunho(): void
+    + finalizar(): void
+    + reenviar_notificacao(): void
+}
+
+enum StatusPreenchimento {
+    PENDENTE
+    EM_PROGRESSO
+    CONCLUIDO
+    EXPIRADO
+}
+
+' ==================== RESPOSTAS E MÍDIAS ====================
+
+class RespostaColeta {
+    - id: UUID
+    - created_at: DateTime
+    - updated_at: DateTime
+    --
+    + adicionar_resposta(): void
+    + validar(): Boolean
+}
+
+class RespostaCampo {
+    - id: UUID
+    - valor_texto: Text
+    - valor_numero: Decimal
+    - valor_data: Date
+    - valor_json: JSON
+    --
+    + obter_valor(): Any
+    + validar(): Boolean
+}
+
+class Foto {
+    - id: UUID
+    - arquivo: ImageField
+    - tamanho: Integer
+    - formato: String
+    - resolucao: String
+    - uploaded_at: DateTime
+    --
+    + validar_formato(): Boolean
+    + validar_tamanho(): Boolean
+    + gerar_thumbnail(): ImageField
+}
+
+class Assinatura {
+    - id: UUID
+    - arquivo: ImageField
+    - tamanho: Integer
+    - formato: String
+    - uploaded_at: DateTime
+    --
+    + validar_complexidade(): Boolean
+    + converter_png(): ImageField
+}
+
+' ==================== NOTIFICAÇÕES E LOGS ====================
+
+class Notificacao {
+    - id: UUID
+    - tipo: TipoNotificacao
+    - assunto: String
+    - mensagem: Text
+    - enviado_em: DateTime
+    - lido: Boolean
+    - tentativas_envio: Integer
+    --
+    + enviar(): Boolean
+    + marcar_lido(): void
+    + reenviar(): Boolean
+}
+
+enum TipoNotificacao {
+    COLETA_INICIADA
+    LEMBRETE_PENDENCIA
+    COLETA_CONCLUIDA
+    SENHA_ALTERADA
+    CADASTRO_PROFISSIONAL
+    RECUPERACAO_SENHA
+}
+
+class LogAuditoria {
+    - id: UUID
+    - timestamp: DateTime
+    - usuario_id: UUID
+    - usuario_tipo: String
+    - acao: String
+    - descricao: Text
+    - ip_address: String
+    - user_agent: String
+    - dados_alterados: JSON
+    --
+    + registrar(): void
+    + exportar(): File
+}
+
+class LogEmail {
+    - id: UUID
+    - destinatario: String
+    - assunto: String
+    - enviado_em: DateTime
+    - status: String
+    - erro: Text
+    --
+    + registrar_envio(): void
+    + registrar_erro(): void
+}
+
+' ==================== DASHBOARD E MÉTRICAS ====================
+
+class DashboardGerente {
+    - coletas_abertas: Integer
+    - coletas_concluidas: Integer
+    - empresas_ativas: Integer
+    - coletas_pendentes_mes: Integer
+    - coletas_abertas_mes_anterior: Integer
+    - empresas_desativadas: Integer
+    --
+    + calcular_metricas(): void
+    + gerar_graficos(): JSON
+    + filtrar_periodo(): DashboardData
+}
+
+class DashboardEmpresa {
+    - total_coletas: Integer
+    - coletas_ativas: Integer
+    - profissionais_cadastrados: Integer
+    - taxa_conclusao_media: Float
+    --
+    + calcular_metricas(): void
+    + gerar_evolucao_mensal(): JSON
+}
+
+' ==================== RELACIONAMENTOS ====================
+
+' Herança
+Usuario <|-- Gerente
+Usuario <|-- Empresa
+Usuario <|-- Profissional
+
+' Gerente
+Gerente "1" -- "0..*" Empresa : cadastra >
+Gerente "1" -- "0..*" Gerente : cadastra >
+Gerente "1" -- "0..*" Coleta : inicia >
+
+' Empresa
+Empresa "1" *-- "0..*" ModeloCartao : possui (privado) >
+Empresa "1" -- "0..*" Profissional : cadastra >
+Empresa "1" -- "0..*" Departamento : possui >
+Empresa "1" -- "0..*" Coleta : gerencia >
+
+' Departamento
+Departamento "1" -- "0..*" Profissional : agrupa >
+
+' Modelo e Campos
+ModeloCartao "1" *-- "0..*" CampoCartao : contém >
+CampoCartao "1" -- "1" TipoCampo : tipo >
+
+' Coleta
+Coleta "1" -- "1" ModeloCartao : baseado em >
+Coleta "1" -- "1" StatusColeta : status >
+Coleta "1" -- "1..*" ColetaProfissional : possui >
+Coleta "1" -- "1" Empresa : pertence a >
+Coleta "0..*" -- "0..1" Gerente : iniciada por >
+
+' ColetaProfissional
+ColetaProfissional "1" -- "1" Profissional : destinado a >
+ColetaProfissional "1" -- "1" StatusPreenchimento : status >
+ColetaProfissional "1" -- "0..1" RespostaColeta : possui >
+
+' Respostas
+RespostaColeta "1" *-- "0..*" RespostaCampo : contém >
+RespostaColeta "1" -- "0..1" Foto : possui >
+RespostaColeta "1" -- "0..1" Assinatura : possui >
+RespostaCampo "1" -- "1" CampoCartao : responde a >
+
+' Notificações
+ColetaProfissional "1" -- "0..*" Notificacao : gera >
+Profissional "1" -- "0..*" Notificacao : recebe >
+
+' Logs
+Usuario "1" -- "0..*" LogAuditoria : gera >
+Notificacao "1" -- "0..1" LogEmail : registra >
+
+' Dashboard
+Gerente "1" -- "1" DashboardGerente : visualiza >
+Empresa "1" -- "1" DashboardEmpresa : visualiza >
+
+' ==================== NOTAS ====================
+
+note right of Usuario
+    Classe abstrata base para 
+    todos os tipos de usuários.
+    Implementa autenticação JWT.
+end note
+
+note right of Coleta
+    Status controlado por máquina 
+    de estados. Percentual calculado
+    em tempo real.
+end note
+
+note right of ColetaProfissional
+    RelacionamentoMany-to-Many entre
+    Coleta e Profissional com atributos
+    adicionais.
+end note
+
+note bottom of ModeloCartao
+    Modelos são PRIVADOS por empresa.
+    Gerente acessa empresa para gerenciar.
+    Design drag-and-drop em canvas.
+    Dimensões reais do cartão físico.
+end note
+
+note bottom of Departamento
+    Organização hierárquica opcional.
+    Facilita coletas segmentadas.
+end note
+
+@enduml

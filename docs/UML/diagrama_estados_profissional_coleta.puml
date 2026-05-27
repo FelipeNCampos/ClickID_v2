@@ -1,0 +1,68 @@
+@startuml ClickID - Diagrama de Estados: Profissional na Coleta
+
+title Máquina de Estados - Preenchimento do Profissional
+
+[*] --> Pendente : Profissional adicionado à coleta
+
+state Pendente {
+    Pendente : Aguardando preenchimento
+    Pendente : - Notificação enviada
+    Pendente : - Link disponível
+    Pendente : - Prazo ativo
+    Pendente : entry / enviar_notificacao_inicial()
+}
+
+Pendente --> EmProgresso : Profissional inicia preenchimento
+Pendente --> Expirado : Prazo vencido\n[timeout]
+Pendente --> Pendente : Reenviar notificação
+
+state EmProgresso {
+    EmProgresso : Formulário sendo preenchido
+    EmProgresso : - Rascunho salvo automaticamente
+    EmProgresso : - Campos validados em tempo real
+    EmProgresso : - Progresso calculado
+    EmProgresso : entry / registrar_inicio()
+    EmProgresso : do / salvar_rascunho_periodico()
+}
+
+EmProgresso --> Concluido : Finalizar formulário\n[Todos campos obrigatórios preenchidos]
+EmProgresso --> EmProgresso : Salvar rascunho\nCapturar foto\nAssinar
+EmProgresso --> Pendente : Sair sem finalizar\n[Rascunho mantido]
+EmProgresso --> Expirado : Prazo vencido\n[timeout]
+
+state Concluido {
+    Concluido : Formulário finalizado
+    Concluido : - Todas respostas salvas
+    Concluido : - Não pode mais editar
+    Concluido : - Email de confirmação enviado
+    Concluido : entry / enviar_confirmacao()
+    Concluido : entry / atualizar_percentual_coleta()
+}
+
+state Expirado {
+    Expirado : Prazo vencido
+    Expirado : - Link desativado
+    Expirado : - Pode ser reaberto pelo gerente
+    Expirado : - Rascunhos mantidos
+}
+
+Expirado --> Pendente : Gerente/Empresa reabre\n[Estender prazo]
+Concluido --> [*]
+Expirado --> [*]
+
+note right of EmProgresso
+    Auto-save a cada 2 minutos
+    ou quando usuário sai da página
+end note
+
+note right of Concluido
+    Estado final: não pode
+    ser editado ou revertido
+end note
+
+note left of Expirado
+    Profissional pode visualizar
+    rascunho mas não pode editar
+end note
+
+@enduml

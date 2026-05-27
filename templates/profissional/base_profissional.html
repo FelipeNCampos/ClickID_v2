@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="{% if empresa and empresa.logo %}{{ empresa.logo.url }}{% else %}{% static 'images/LogoMichiganSemFundo.png' %}{% endif %}">
+    <title>{% block title %}{{ empresa.nome_fantasia|default:'ClickID' }}{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+        main {
+            flex: 1 0 auto;
+        }
+        footer {
+            flex-shrink: 0;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar customizada para profissional -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="{% url 'profissional:dashboard' %}">
+                {# Prefer explicit request.user -> profissional_profile relation when available #}
+                {% if request.user.is_authenticated and request.user.tipo_usuario == 'profissional' and request.user.profissional_profile %}
+                    {% with empresa_obj=request.user.profissional_profile.empresa %}
+                        {% if empresa_obj and empresa_obj.logo %}
+                            <img src="{{ empresa_obj.logo.url }}" alt="{{ empresa_obj.nome_fantasia|default:empresa_obj.razao_social }}" height="34" class="me-2 rounded" />
+                            <span class="fw-bold">{{ empresa_obj.nome_fantasia|default:empresa_obj.razao_social }}</span>
+                        {% else %}
+                            <img src="{% static 'images/LogoMichiganSemFundo.png' %}" alt="ClickID" height="34" class="me-2" />
+                            <span class="fw-bold">ClickID</span>
+                        {% endif %}
+                    {% endwith %}
+                {% elif empresa %}
+                    {% if empresa.logo %}
+                        {% if empresa.logo.url %}
+                            <img src="{{ empresa.logo.url }}" alt="{{ empresa.nome_fantasia|default:empresa.razao_social }}" height="34" class="me-2 rounded" />
+                        {% else %}
+                            <img src="{{ empresa.logo }}" alt="{{ empresa.nome_fantasia|default:empresa.razao_social }}" height="34" class="me-2 rounded" />
+                        {% endif %}
+                    {% else %}
+                        <img src="{% static 'images/LogoMichiganSemFundo.png' %}" alt="ClickID" height="34" class="me-2" />
+                    {% endif %}
+                    <span class="fw-bold">{{ empresa.nome_fantasia|default:empresa.razao_social|default:'ClickID' }}</span>
+                {% else %}
+                    <img src="{% static 'images/LogoMichiganSemFundo.png' %}" alt="ClickID" height="34" class="me-2" />
+                    <span class="fw-bold">ClickID</span>
+                {% endif %}
+                
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <!-- Menu items removidos -->
+                </ul>
+            </div>
+        </div>
+    </nav>
+    
+    <main class="container mt-4">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert" data-auto-dismiss="10000">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+    </main>
+    
+    <footer class="mt-5 py-3 bg-light">
+        <div class="container text-center">
+            <small class="text-muted">{{ empresa.nome_fantasia|default:'ClickID' }} - Sistema de Pedidos de Dados</small>
+        </div>
+    </footer>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-hide alerts após tempo especificado
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('[data-auto-dismiss]');
+            alerts.forEach(function(alert) {
+                const time = parseInt(alert.getAttribute('data-auto-dismiss'));
+                if (time) {
+                    setTimeout(function() {
+                        const bsAlert = new bootstrap.Alert(alert);
+                        bsAlert.close();
+                    }, time);
+                }
+            });
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

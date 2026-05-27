@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Logs de Auditoria{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header pb-0">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h5 class="mb-0">Logs de Auditoria</h5>
+                        <a href="{% url 'web-empresa:dashboard-empresa' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-arrow-left me-2"></i>Voltar
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body px-0 pt-0 pb-2">
+                    <div class="table-responsive p-4">
+                        {% if logs %}
+                        <table class="table align-items-center mb-0" id="logsTable">
+                            <thead>
+                                <tr>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                                        Data/Hora
+                                    </th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Usuário
+                                    </th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Ação
+                                    </th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Descrição
+                                    </th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                        Coleta
+                                    </th>
+                                    <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                                        IP
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex px-3 py-1">
+                                            <div class="d-flex flex-column justify-content-center">
+                                                <h6 class="mb-0 text-xs">{{ log.data_hora|date:"d/m/Y" }}</h6>
+                                                <p class="text-xs text-secondary mb-0">{{ log.data_hora|date:"H:i:s" }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column justify-content-center">
+                                            <h6 class="mb-0 text-xs">{{ log.usuario_nome|default:"Sistema" }}</h6>
+                                            <p class="text-xs text-secondary mb-0">{{ log.usuario_email|default:"-" }}</p>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-sm 
+                                            {% if log.tipo_acao == 'COLETA_CRIADA' %}bg-info
+                                            {% elif log.tipo_acao == 'COLETA_INICIADA' %}bg-success
+                                            {% elif log.tipo_acao == 'COLETA_CANCELADA' %}bg-warning
+                                            {% elif log.tipo_acao == 'COLETA_CONCLUIDA' %}bg-primary
+                                            {% elif log.tipo_acao == 'COLETA_REABERTA' %}bg-secondary
+                                            {% elif log.tipo_acao == 'PARTICIPANTE_ADICIONADO' %}bg-gradient-success
+                                            {% elif log.tipo_acao == 'PARTICIPANTE_REMOVIDO' %}bg-gradient-danger
+                                            {% else %}bg-dark
+                                            {% endif %}">
+                                            {{ log.get_tipo_acao_display|default:log.tipo_acao }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <p class="text-xs font-weight-normal mb-0">
+                                            {{ log.descricao|truncatewords:15 }}
+                                        </p>
+                                    </td>
+                                    <td>
+                                        {% if log.coleta_nome %}
+                                            <a href="{% url 'web-empresa:coleta-detail' log.coleta_id %}" 
+                                               class="text-xs text-primary font-weight-bold">
+                                                {{ log.coleta_nome }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-xs text-secondary">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="align-middle text-center">
+                                        <span class="text-secondary text-xs">{{ log.ip_address|default:"-" }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <div class="alert alert-info text-center" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Nenhum log de auditoria encontrado.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // DataTables initialization for better filtering and sorting
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if logs %}
+        const table = document.getElementById('logsTable');
+        if (table && typeof $ !== 'undefined' && $.fn.DataTable) {
+            $(table).DataTable({
+                "pageLength": 25,
+                "order": [[0, "desc"]], // Sort by date descending
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json"
+                }
+            });
+        }
+        {% endif %}
+    });
+</script>
+{% endblock %}

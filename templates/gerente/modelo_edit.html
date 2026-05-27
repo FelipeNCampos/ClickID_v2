@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Editar Modelo - {{ modelo.nome }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mt-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:empresas-list' %}">Empresas</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:empresa-detail' empresa.id %}">{{ empresa.nome_fantasia }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:modelos-list' empresa.id %}">Modelos</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:modelo-detail' empresa.id modelo.id %}">{{ modelo.nome }}</a></li>
+            <li class="breadcrumb-item active">Editar</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Editar Modelo</h1>
+            <p class="text-muted">{{ empresa.nome_fantasia }}</p>
+        </div>
+    </div>
+
+    <!-- Mensagens -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        <!-- Formulário -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Informações do Modelo</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="nome" class="form-label">Nome do Modelo *</label>
+                            <input type="text" class="form-control" id="nome" name="nome" 
+                                   value="{{ modelo.nome }}" placeholder="Ex: Cartão Padrão Empresa" required>
+                            <div class="form-text">Nome identificador do modelo</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="descricao" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="descricao" name="descricao" 
+                                      rows="4" placeholder="Descrição opcional do modelo">{{ modelo.descricao }}</textarea>
+                            <div class="form-text">Informações adicionais sobre o modelo</div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="largura_mm" class="form-label">Largura (mm) *</label>
+                                    <input type="number" class="form-control" id="largura_mm" name="largura_mm" 
+                                           value="{{ modelo.largura_mm }}" step="0.1" min="50" max="200" required>
+                                    <div class="form-text">Largura do cartão em milímetros</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="altura_mm" class="form-label">Altura (mm) *</label>
+                                    <input type="number" class="form-control" id="altura_mm" name="altura_mm" 
+                                           value="{{ modelo.altura_mm }}" step="0.1" min="30" max="150" required>
+                                    <div class="form-text">Altura do cartão em milímetros</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>Salvar Alterações
+                            </button>
+                            <a href="{% url 'web-gerente:modelo-detail' empresa.id modelo.id %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informações -->
+        <div class="col-lg-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Informações Atuais</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <strong class="text-muted">Nome:</strong>
+                        <p class="mb-0">{{ modelo.nome }}</p>
+                    </div>
+                    <div class="mb-2">
+                        <strong class="text-muted">Dimensões:</strong>
+                        <p class="mb-0">{{ modelo.largura_mm }} × {{ modelo.altura_mm }} mm</p>
+                    </div>
+                    <div class="mb-2">
+                        <strong class="text-muted">Status:</strong>
+                        <p class="mb-0">
+                            {% if modelo.is_active %}
+                                <span class="badge bg-success">Ativo</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inativo</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% if modelo.data_cadastro %}
+                    <div>
+                        <strong class="text-muted">Criado em:</strong>
+                        <p class="mb-0">{{ modelo.data_cadastro|date:"d/m/Y H:i" }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Dicas</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">
+                        <strong>Dimensões:</strong><br>
+                        Certifique-se de que as dimensões estejam corretas antes de salvar.
+                    </p>
+                    <p class="small mb-0">
+                        <strong>Alterações:</strong><br>
+                        As alterações serão aplicadas imediatamente após salvar.
+                    </p>
+                </div>
+            </div>
+
+            <div class="card border-warning">
+                <div class="card-header bg-warning bg-opacity-10">
+                    <h6 class="mb-0 text-warning"><i class="bi bi-exclamation-triangle me-2"></i>Atenção</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-0">
+                        Alterações nas dimensões podem afetar cartões já criados com este modelo. 
+                        Verifique cuidadosamente antes de salvar.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

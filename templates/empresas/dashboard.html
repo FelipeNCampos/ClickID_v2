@@ -1,0 +1,334 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - {{ empresa.razao_social }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
+    </div>
+    <div>
+        <a href="{% url 'web-empresa:coleta-create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Nova Coleta
+        </a>
+    </div>
+</div>
+
+<!-- Cards de Estatísticas -->
+<div class="row mb-4">
+    <!-- Profissionais -->
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Profissionais</h6>
+                        <h2 class="mb-0">{{ total_profissionais }}</h2>
+                        <small class="text-success">
+                            <i class="bi bi-check-circle"></i> {{ total_profissionais_ativos }} ativos
+                        </small>
+                    </div>
+                    <div class="text-primary" style="font-size: 3rem; opacity: 0.3;">
+                        <i class="bi bi-people"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{% url 'web-empresa:profissionais-list' %}" class="text-decoration-none small">
+                    Ver todos <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Departamentos -->
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Departamentos</h6>
+                        <h2 class="mb-0">{{ total_departamentos }}</h2>
+                        <small class="text-muted">Organizações</small>
+                    </div>
+                    <div class="text-success" style="font-size: 3rem; opacity: 0.3;">
+                        <i class="bi bi-diagram-3"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{% url 'web-empresa:departamentos-list' %}" class="text-decoration-none small">
+                    Ver todos <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Coletas Ativas -->
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Coletas Ativas</h6>
+                        <h2 class="mb-0">{{ total_coletas_ativas }}</h2>
+                        <small class="text-muted">Em andamento</small>
+                    </div>
+                    <div class="text-warning" style="font-size: 3rem; opacity: 0.3;">
+                        <i class="bi bi-collection"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{% url 'web-empresa:coletas-list' %}" class="text-decoration-none small">
+                    Ver todas <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total de Coletas -->
+    <div class="col-md-3">
+        <div class="card border-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Total de Coletas</h6>
+                        <h2 class="mb-0">{{ total_coletas }}</h2>
+                        <small class="text-muted">
+                            <i class="bi bi-check-all"></i> {{ total_coletas_concluidas }} concluídas
+                        </small>
+                    </div>
+                    <div class="text-info" style="font-size: 3rem; opacity: 0.3;">
+                        <i class="bi bi-clipboard-data"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{% url 'web-empresa:coletas-list' %}" class="text-decoration-none small">
+                    Ver todas <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Coletas Recentes e Ações Rápidas -->
+<div class="row">
+    <!-- Coletas Recentes -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Coletas Recentes</h5>
+                <a href="{% url 'web-empresa:coletas-list' %}" class="btn btn-sm btn-outline-light">
+                    <i class="bi bi-arrow-right-circle"></i> Ver todas
+                </a>
+            </div>
+            <div class="card-body">
+                {% if coletas_recentes %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Status</th>
+                                <th>Progresso</th>
+                                <th>Prazo</th>
+                                <th class="text-end">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for coleta in coletas_recentes %}
+                            <tr>
+                                <td><strong>{{ coleta.nome }}</strong></td>
+                                <td>
+                                    {% if coleta.status == 'em_andamento' %}
+                                        <span class="badge bg-warning">Em Andamento</span>
+                                    {% elif coleta.status == 'concluida' %}
+                                        <span class="badge bg-success">Concluída</span>
+                                    {% elif coleta.status == 'rascunho' %}
+                                        <span class="badge bg-secondary">Rascunho</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Cancelada</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if coleta.total_profissionais > 0 %}
+                                    <div class="progress" style="height: 20px;">
+                                        {% widthratio coleta.total_concluidos coleta.total_profissionais 100 as percentual %}
+                                        <div class="progress-bar" role="progressbar" style="width: {{ percentual }}%;">
+                                            {{ percentual }}%
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if coleta.prazo %}
+                                        {{ coleta.prazo|date:"d/m/Y" }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <a href="{% url 'web-empresa:coleta-detail' coleta.id %}" class="btn btn-sm btn-info">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'web-empresa:coleta-manage' coleta.id %}" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-gear"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                    <p class="text-muted mt-2">Nenhuma coleta criada ainda</p>
+                    <a href="{% url 'web-empresa:coleta-create' %}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus-circle"></i> Criar primeira coleta
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Ações Rápidas -->
+    <div class="col-md-4">
+        <!-- Link de Login da Empresa -->
+        <div class="card mb-3 border-primary">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0"><i class="bi bi-link-45deg"></i> Link de Login</h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-2">Compartilhe este link com seus profissionais:</p>
+                <div class="input-group mb-2">
+                    <input type="text" class="form-control" id="loginLink" 
+                           value="{{ request.scheme }}://{{ request.get_host }}/{{ empresa.url_personalizada }}" 
+                           readonly>
+                    <button class="btn btn-outline-primary" type="button" 
+                            onclick="copyLoginLink()" 
+                            title="Copiar link">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+                <small class="text-muted">
+                    <i class="bi bi-info-circle"></i> Profissionais usam CPF para login
+                </small>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-lightning"></i> Ações Rápidas</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'web-empresa:coleta-create' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Nova Coleta
+                    </a>
+                    <a href="{% url 'web-empresa:profissional-create' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-person-plus"></i> Novo Profissional
+                    </a>
+                    <a href="{% url 'web-empresa:profissionais-import' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-file-earmark-excel"></i> Importar Profissionais
+                    </a>
+                    <a href="{% url 'web-empresa:departamento-create' %}" class="btn btn-outline-success">
+                        <i class="bi bi-diagram-3"></i> Novo Departamento
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profissionais Recentes -->
+        <div class="card mt-3">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="bi bi-people"></i> Últimos Profissionais</h6>
+            </div>
+            <div class="card-body">
+                {% if profissionais_recentes %}
+                <ul class="list-group list-group-flush">
+                    {% for prof in profissionais_recentes %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div>
+                            <strong>{{ prof.nome }}</strong>
+                            <br>
+                            <small class="text-muted">{{ prof.cpf }}</small>
+                        </div>
+                        {% if prof.is_active %}
+                            <span class="badge bg-success">Ativo</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inativo</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted small mb-0">Nenhum profissional cadastrado</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyLoginLink() {
+    const linkInput = document.getElementById('loginLink');
+    linkInput.select();
+    linkInput.setSelectionRange(0, 99999); // Para mobile
+    
+    // Verificar se clipboard API está disponível
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(linkInput.value).then(() => {
+            // Feedback visual
+            const button = event.target.closest('button');
+            const originalHTML = button.innerHTML;
+            button.innerHTML = '<i class="bi bi-check"></i>';
+            button.classList.remove('btn-outline-primary');
+            button.classList.add('btn-success');
+            
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.classList.remove('btn-success');
+                button.classList.add('btn-outline-primary');
+            }, 2000);
+        }).catch(err => {
+            fallbackCopyText(linkInput);
+        });
+    } else {
+        // Fallback para navegadores antigos
+        fallbackCopyText(linkInput);
+    }
+}
+
+function fallbackCopyText(input) {
+    try {
+        input.select();
+        const successful = document.execCommand('copy');
+        if (successful) {
+            const button = event.target.closest('button');
+            const originalHTML = button.innerHTML;
+            button.innerHTML = '<i class="bi bi-check"></i>';
+            button.classList.remove('btn-outline-primary');
+            button.classList.add('btn-success');
+            
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.classList.remove('btn-success');
+                button.classList.add('btn-outline-primary');
+            }, 2000);
+        } else {
+            alert('Erro ao copiar. Por favor, copie manualmente: Ctrl+C');
+        }
+    } catch (err) {
+        alert('Erro ao copiar. Por favor, copie manualmente: Ctrl+C');
+    }
+}
+</script>
+{% endblock %}

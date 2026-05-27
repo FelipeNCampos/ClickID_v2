@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}Respostas do Participante - ClickID{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'web-empresa:coletas-list' %}">Coletas</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'web-empresa:coleta-detail' coleta.id %}">{{ coleta.nome }}</a></li>
+            <li class="breadcrumb-item active">Respostas de {{ participante.nome }}</li>
+        </ol>
+    </nav>
+    <h2 class="mb-4"><i class="bi bi-person-lines-fill"></i> Respostas de {{ participante.nome }}</h2>
+    {% if respostas %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="mb-3"><i class="bi bi-chat-left-text"></i> Respostas de Texto</h5>
+            <ul class="list-group list-group-flush mb-4">
+                {% for resposta in respostas %}
+                {% if resposta.campo_tipo == 'texto' or resposta.campo_tipo == 'texto_longo' %}
+                <li class="list-group-item">
+                    <strong>{{ resposta.campo_nome }}:</strong>
+                    <span class="d-block p-2 bg-light border rounded">{{ resposta.valor }}</span>
+                    {% if resposta.data_resposta %}
+                        <br><small class="text-muted">Respondido em: {{ resposta.data_resposta|date:'d/m/Y H:i' }}</small>
+                    {% endif %}
+                </li>
+                {% endif %}
+                {% endfor %}
+            </ul>
+            <h5 class="mb-3"><i class="bi bi-image"></i> Mídias</h5>
+            <ul class="list-group list-group-flush">
+                {% for resposta in respostas %}
+                {% if resposta.campo_nome == 'foto' or resposta.campo_nome == 'assinatura' %}
+                <li class="list-group-item">
+                    <strong>{{ resposta.campo_nome }}:</strong>
+                    <div class="mt-2">
+                        <a href="{{ resposta.valor }}" target="_blank" rel="noopener noreferrer">
+                            <img src="{{ resposta.valor }}" alt="{{ resposta.campo_nome }}" class="img-fluid img-thumbnail" style="max-width:360px;" />
+                        </a>
+                    </div>
+                    <div class="mt-2">
+                        <a href="{{ resposta.valor }}" target="_blank" class="btn btn-sm btn-outline-primary me-2">Abrir imagem</a>
+                        <a href="{{ resposta.valor }}" download class="btn btn-sm btn-outline-secondary">Baixar</a>
+                    </div>
+                    {% if resposta.data_resposta %}
+                        <br><small class="text-muted">Respondido em: {{ resposta.data_resposta|date:'d/m/Y H:i' }}</small>
+                    {% endif %}
+                </li>
+                {% endif %}
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">Nenhuma resposta encontrada para este participante.</div>
+    {% endif %}
+    <a href="{% url 'web-empresa:coleta-detail' coleta.id %}" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Voltar para Coleta</a>
+</div>
+{% endblock %}

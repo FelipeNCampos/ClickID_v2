@@ -1,0 +1,261 @@
+@startuml ClickID - Sequência: Iniciar e Preencher Coleta
+
+title Fluxo Completo: Iniciar Coleta e Preenchimento pelo Profissional
+
+actor Gerente
+participant "Sistema Web" as Web
+participant "API Backend" as API
+participant "Banco de Dados" as DB
+participant "Serviço de Email" as Email
+participant "Storage S3" as S3
+actor Profissional
+
+== Fase 1: Gerente Inicia Coleta ==
+
+Gerente -> Web: Acessa página de coletas
+activate Web
+Web -> API: GET /api/empresas/{id}
+activate API
+API -> DB: Query empresas e modelos
+activate DB
+DB --> API: Dados da empresa
+deactivate DB
+API --> Web: Lista de empresas e modelos
+deactivate API
+Web --> Gerente: Exibe formulário de nova coleta
+deactivate Web
+
+Gerente -> Web: Seleciona empresa, modelo e departamento
+Gerente -> Web: Upload Excel (CPF, Nome)
+activate Web
+Web -> API: POST /api/coletas/
+activate API
+
+API -> API: Valida arquivo Excel
+API -> DB: Verifica CPFs existentes
+activate DB
+DB --> API: CPFs já cadastrados
+deactivate DB
+
+loop Para cada profissional novo
+    API -> DB: INSERT profissional
+    activate DB
+    DB --> API: Profissional criado
+    deactivate DB
+end
+
+API -> DB: INSERT coleta
+activate DB
+DB --> API: Coleta criada
+deactivate DB
+
+loop Para cada profissional
+    API -> DB: INSERT coleta_profissional
+    activate DB
+    DB --> API: Vinculação criada
+    deactivate DB
+end
+
+API -> DB: INSERT log_auditoria
+activate DB
+DB --> API: Log registrado
+deactivate DB
+
+API --> Web: Coleta criada com sucesso
+deactivate API
+Web --> Gerente: Confirmação e ID da coleta
+deactivate Web
+
+== Fase 2: Notificação dos Profissionais ==
+
+API -> Email: Enviar emails em lote
+activate Email
+loop Para cada profissional
+    Email -> Email: Compor email com link personalizado
+    Email -> Profissional: Email: "Nova coleta disponível"
+    Email -> DB: INSERT log_email
+    activate DB
+    DB --> Email: Log registrado
+    deactivate DB
+end
+Email --> API: Emails enviados
+deactivate Email
+
+== Fase 3: Profissional Acessa e Faz Login ==
+
+Profissional -> Web: Acessa link do email
+activate Web
+Web -> API: GET /empresas/{slug}/login
+activate API
+API -> DB: Query empresa por slug
+activate DB
+DB --> API: Dados da empresa
+deactivate DB
+API --> Web: Página de login personalizada
+deactivate API
+Web --> Profissional: Exibe login com branding
+deactivate Web
+
+Profissional -> Web: Insere CPF e senha padrão
+activate Web
+Web -> API: POST /api/auth/login
+activate API
+API -> DB: Query profissional por CPF
+activate DB
+DB --> API: Dados do profissional
+deactivate DB
+
+alt Primeiro Login
+    API -> API: Valida senha padrão (4 últimos dígitos)
+    API --> Web: Requer alteração de senha
+    Web --> Profissional: Exibe tela de nova senha
+    Profissional -> Web: Define nova senha
+    Web -> API: PUT /api/auth/change-password
+    API -> DB: UPDATE profissional SET senha_alterada=true
+    activate DB
+    DB --> API: Senha atualizada
+    deactivate DB
+end
+
+API -> API: Gera token JWT
+API -> DB: INSERT log_auditoria
+activate DB
+DB --> API: Log registrado
+deactivate DB
+API --> Web: Token JWT + dados do usuário
+deactivate API
+Web --> Profissional: Redireciona para dashboard
+deactivate Web
+
+== Fase 4: Visualizar Formulários Pendentes ==
+
+Profissional -> Web: Acessa dashboard
+activate Web
+Web -> API: GET /api/profissional/coletas-pendentes
+activate API
+API -> DB: Query coletas pendentes
+activate DB
+DB --> API: Lista de coletas
+deactivate DB
+API --> Web: Coletas pendentes
+deactivate API
+Web --> Profissional: Lista de formulários
+deactivate Web
+
+== Fase 5: Preencher Formulário ==
+
+Profissional -> Web: Clica em "Preencher Formulário"
+activate Web
+Web -> API: GET /api/coletas/{id}/formulario
+activate API
+API -> DB: Query campos do modelo
+activate DB
+DB --> API: Estrutura do formulário
+deactivate DB
+API --> Web: Formulário completo
+deactivate API
+Web --> Profissional: Exibe formulário
+deactivate Web
+
+Profissional -> Web: Preenche campos de texto
+Profissional -> Web: Auto-save acionado
+activate Web
+Web -> API: PUT /api/coletas/{id}/rascunho
+activate API
+API -> DB: UPDATE resposta_coleta
+activate DB
+DB --> API: Rascunho salvo
+deactivate DB
+API --> Web: Confirmação
+deactivate API
+Web --> Profissional: "Salvo automaticamente"
+deactivate Web
+
+== Fase 6: Capturar Foto ==
+
+Profissional -> Web: Clica em "Tirar Foto"
+activate Web
+Web -> Web: Acessa câmera do navegador
+Web --> Profissional: Preview da foto
+Profissional -> Web: Confirma foto
+Web -> API: POST /api/coletas/{id}/foto
+activate API
+API -> S3: Upload da imagem
+activate S3
+S3 --> API: URL da imagem
+deactivate S3
+API -> DB: UPDATE resposta_coleta (foto_url)
+activate DB
+DB --> API: Foto registrada
+deactivate DB
+API --> Web: Upload concluído
+deactivate API
+Web --> Profissional: "Foto salva com sucesso"
+deactivate Web
+
+== Fase 7: Assinar Digitalmente ==
+
+Profissional -> Web: Desenha assinatura no canvas
+activate Web
+Profissional -> Web: Clica em "Confirmar"
+Web -> Web: Converte canvas para PNG
+Web -> API: POST /api/coletas/{id}/assinatura
+activate API
+API -> API: Valida complexidade da assinatura
+API -> S3: Upload da assinatura
+activate S3
+S3 --> API: URL da assinatura
+deactivate S3
+API -> DB: UPDATE resposta_coleta (assinatura_url)
+activate DB
+DB --> API: Assinatura registrada
+deactivate DB
+API --> Web: Upload concluído
+deactivate API
+Web --> Profissional: "Assinatura salva"
+deactivate Web
+
+== Fase 8: Finalizar Formulário ==
+
+Profissional -> Web: Clica em "Finalizar"
+activate Web
+Web -> API: POST /api/coletas/{id}/finalizar
+activate API
+API -> API: Valida campos obrigatórios
+API -> DB: UPDATE coleta_profissional SET status='CONCLUIDO'
+activate DB
+DB --> API: Status atualizado
+deactivate DB
+API -> DB: UPDATE coleta (recalcula percentual)
+activate DB
+DB --> API: Coleta atualizada
+deactivate DB
+API -> Email: Enviar email de confirmação
+activate Email
+Email -> Profissional: "Formulário concluído com sucesso"
+deactivate Email
+API -> DB: INSERT log_auditoria
+activate DB
+DB --> API: Log registrado
+deactivate DB
+API --> Web: Conclusão confirmada
+deactivate API
+Web --> Profissional: "Obrigado! Formulário enviado"
+deactivate Web
+
+== Fase 9: Gerente Visualiza Progresso ==
+
+Gerente -> Web: Acessa detalhes da coleta
+activate Web
+Web -> API: GET /api/coletas/{id}/detalhes
+activate API
+API -> DB: Query coleta com estatísticas
+activate DB
+DB --> API: Dados da coleta + percentual
+deactivate DB
+API --> Web: Detalhes completos
+deactivate API
+Web --> Gerente: Dashboard com progresso em tempo real
+deactivate Web
+
+@enduml

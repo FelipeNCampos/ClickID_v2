@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block title %}Pedidos - {{ request.user.empresa_profile.razao_social }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-collection"></i> Meus Pedidos</h2>
+    <a href="{% url 'web-empresa:coleta-create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Novo Pedido
+    </a>
+</div>
+
+{% if coletas %}
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Modelo</th>
+                            <th>Status</th>
+                            <th class="text-center">Progresso</th>
+                            <th>Data Início</th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for coleta in coletas %}
+                        <tr>
+                            <td><strong>{{ coleta.nome }}</strong></td>
+                            <td>{{ coleta.modelo_nome|default:'-' }}</td>
+                            <td>
+                                {% if coleta.status == 'em_andamento' %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-hourglass-split"></i> Em Andamento
+                                    </span>
+                                {% elif coleta.status == 'concluida' %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> Concluída
+                                    </span>
+                                {% elif coleta.status == 'rascunho' %}
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-file-earmark"></i> Rascunho
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-x-circle"></i> Cancelada
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center" style="min-width: 150px;">
+                                {% if coleta.total_profissionais > 0 %}
+                                    {% widthratio coleta.total_concluidos coleta.total_profissionais 100 as percentual %}
+                                    <div class="progress" style="height: 25px; margin: 0 auto; max-width: 200px;">
+                                        <div class="progress-bar 
+                                            {% if percentual == 100 %}bg-success
+                                            {% elif percentual >= 50 %}bg-info
+                                            {% else %}bg-warning{% endif %}" 
+                                            role="progressbar" 
+                                            style="width: {{ percentual }}%;"
+                                            aria-valuenow="{{ percentual }}" 
+                                            aria-valuemin="0" 
+                                            aria-valuemax="100">
+                                            {{ coleta.total_concluidos }}/{{ coleta.total_profissionais }}
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">{{ percentual }}% completo</small>
+                                {% else %}
+                                    <span class="text-muted">Sem cartões</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if coleta.data_inicio %}
+                                    {{ coleta.data_inicio|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group" role="group">
+                                    {% if coleta.id %}
+                                    <a href="{% url 'web-empresa:coleta-detail' coleta.id %}" 
+                                       class="btn btn-sm btn-info" 
+                                       title="Ver detalhes">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'web-empresa:coleta-manage' coleta.id %}" 
+                                       class="btn btn-sm btn-primary" 
+                                       title="Gerenciar">
+                                        <i class="bi bi-gear"></i>
+                                    </a>
+                                    {% if coleta.status == 'em_andamento' or coleta.status == 'rascunho' %}
+                                        <button type="button" 
+                                            class="btn btn-sm btn-warning" 
+                                            title="Cancelar pedido"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#cancelarModal{{ coleta.id }}">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                    {% endif %}
+                                        <button type="button" 
+                                            class="btn btn-sm btn-danger" 
+                                            title="Apagar pedido"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#apagarModal{{ coleta.id }}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modais de Confirmação -->
+    {% for coleta in coletas %}
+    <!-- Modal Cancelar Coleta -->
+    <div class="modal fade" id="cancelarModal{{ coleta.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="bi bi-x-circle"></i> Cancelar Pedido</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Tem certeza que deseja <strong>cancelar</strong> o pedido "{{ coleta.nome }}"?</p>
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-info-circle"></i> O pedido será marcado como cancelado e os cartões não poderão mais preencher.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Não</button>
+                    <form method="POST" action="{% url 'web-empresa:coleta-cancelar' coleta.id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-x-circle"></i> Sim, Cancelar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Apagar Coleta -->
+    <div class="modal fade" id="apagarModal{{ coleta.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-trash"></i> Apagar Pedido</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Tem certeza que deseja <strong>apagar</strong> o pedido "{{ coleta.nome }}"?</p>
+                    <p class="text-danger small mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> Esta ação tornará o pedido inativo e ele não aparecerá mais nas listagens.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Não</button>
+                    <form method="POST" action="{% url 'web-empresa:coleta-apagar' coleta.id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash"></i> Sim, Apagar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+            <h4 class="mt-3 text-muted">Nenhum pedido criado ainda</h4>
+            <p class="text-muted">
+                Crie seu primeiro pedido para começar a coletar dados dos cartões
+            </p>
+            <a href="{% url 'web-empresa:coleta-create' %}" class="btn btn-primary btn-lg mt-3">
+                <i class="bi bi-plus-circle"></i> Criar Primeiro Pedido
+            </a>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

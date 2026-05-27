@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ action }} Empresa - ClickID{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-building"></i> {{ action }} Empresa
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    {% if not empresa %}
+                    <!-- Dados de Acesso (apenas para criação) -->
+                    <h6 class="border-bottom pb-2 mb-3">Dados de Acesso</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email *</label>
+                                <input type="email" class="form-control" id="email" name="email" required>
+                                <small class="form-text text-muted">Email para login no sistema</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Senha *</label>
+                                <input type="password" class="form-control" id="password" name="password" required>
+                                <small class="form-text text-muted">Mínimo 6 caracteres</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Dados da Empresa -->
+                    <h6 class="border-bottom pb-2 mb-3 mt-4">Dados da Empresa</h6>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="razao_social" class="form-label">Razão Social *</label>
+                                <input type="text" class="form-control" id="razao_social" name="razao_social" 
+                                       value="{{ empresa.razao_social|default:'' }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="cnpj" class="form-label">CNPJ *</label>
+                                <input type="text" class="form-control" id="cnpj" name="cnpj" 
+                                       value="{{ empresa.cnpj|default:'' }}" 
+                                       {% if empresa %}readonly{% else %}required{% endif %}
+                                       placeholder="00.000.000/0000-00">
+                                <small class="form-text text-muted">Apenas números</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label for="nome_fantasia" class="form-label">Nome Fantasia</label>
+                                <input type="text" class="form-control" id="nome_fantasia" name="nome_fantasia" 
+                                       value="{{ empresa.nome_fantasia|default:'' }}"
+                                       placeholder="Nome comercial da empresa">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="telefone" class="form-label">Telefone</label>
+                                <input type="text" class="form-control" id="telefone" name="telefone" 
+                                       value="{{ empresa.telefone|default:'' }}"
+                                       placeholder="(00) 00000-0000">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="url_personalizada" class="form-label">URL Personalizada</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">clickid.com/</span>
+                                    <input type="text" class="form-control" id="url_personalizada" 
+                                           name="url_personalizada" value="{{ empresa.url_personalizada|default:'' }}"
+                                           placeholder="minha-empresa">
+                                </div>
+                                <small class="form-text text-muted">Apenas letras, números e hífen</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label for="logo" class="form-label">Logo da Empresa</label>
+                                <input type="file" class="form-control" id="logo" name="logo" accept="image/*">
+                                {% if empresa.logo %}
+                                    <div class="mt-2">
+                                        <img src="{{ empresa.logo }}" alt="Logo atual" style="max-height: 100px;" class="img-thumbnail">
+                                        <p class="text-muted small mt-1">Logo atual - Faça upload de uma nova imagem para substituir</p>
+                                    </div>
+                                {% endif %}
+                                <div class="alert alert-info mt-2 mb-0" role="alert">
+                                    <i class="bi bi-lightbulb"></i> <strong>Dica Importante:</strong> 
+                                    Use uma logo <strong>branca ou em tons claros</strong> para melhor visibilidade na página de login, 
+                                    pois o fundo possui um gradiente azul escuro.
+                                </div>
+                                <small class="form-text text-muted d-block mt-2">Formatos aceitos: JPG, PNG, GIF (máximo 2MB). Recomendado: PNG com fundo transparente</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Endereço -->
+                    <h6 class="border-bottom pb-2 mb-3 mt-4">Endereço (Opcional)</h6>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label for="endereco" class="form-label">Endereço Completo</label>
+                                <textarea class="form-control" id="endereco" name="endereco" rows="3" 
+                                          placeholder="Rua, número, complemento, bairro, cidade, estado, CEP">{{ empresa.endereco|default:'' }}</textarea>
+                                <small class="form-text text-muted">Informe o endereço completo da empresa</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Botões -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'web-gerente:empresas-list' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Voltar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> {{ action }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar com dicas -->
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h6 class="card-title"><i class="bi bi-info-circle"></i> Informações</h6>
+                <hr>
+                
+                {% if not empresa %}
+                <h6 class="text-primary">Nova Empresa</h6>
+                <p class="small">
+                    Ao criar uma empresa, um usuário de acesso será criado automaticamente 
+                    com o email e senha informados.
+                </p>
+                {% else %}
+                <h6 class="text-primary">Edição</h6>
+                <p class="small">
+                    O email e CNPJ não podem ser alterados após a criação.
+                </p>
+                {% endif %}
+                
+                <hr>
+                
+                <h6 class="text-primary">URL Personalizada</h6>
+                <p class="small">
+                    A URL personalizada será usada para acesso público da empresa. 
+                    Por exemplo: <code>clickid.com/minha-empresa</code>
+                </p>
+                
+                <hr>
+                
+                <h6 class="text-primary">CNPJ</h6>
+                <p class="small">
+                    Digite apenas os números do CNPJ (14 dígitos).
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Máscara para CNPJ com formatação: 00.000.000/0000-00
+document.getElementById('cnpj').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    
+    // Limitar a 14 dígitos
+    if (value.length > 14) {
+        value = value.substring(0, 14);
+    }
+    
+    // Aplicar formatação: 00.000.000/0000-00
+    if (value.length > 12) {
+        value = value.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    } else if (value.length > 8) {
+        value = value.replace(/(\d{2})(\d{3})(\d{3})(\d{0,4})/, '$1.$2.$3/$4');
+    } else if (value.length > 5) {
+        value = value.replace(/(\d{2})(\d{3})(\d{0,3})/, '$1.$2.$3');
+    } else if (value.length > 2) {
+        value = value.replace(/(\d{2})(\d{0,3})/, '$1.$2');
+    }
+    
+    e.target.value = value;
+});
+
+// Máscara para telefone
+document.getElementById('telefone').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 11) {
+        if (value.length > 6) {
+            value = value.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3');
+        } else if (value.length > 2) {
+            value = value.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
+        } else {
+            value = value.replace(/^(\d*)/, '($1');
+        }
+    }
+    e.target.value = value;
+});
+
+// Validar URL personalizada
+document.getElementById('url_personalizada').addEventListener('input', function(e) {
+    let value = e.target.value.toLowerCase();
+    value = value.replace(/[^a-z0-9-]/g, '');
+    e.target.value = value;
+});
+</script>
+{% endblock %}

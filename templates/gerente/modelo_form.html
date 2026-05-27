@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Novo Modelo - {{ empresa.nome_fantasia }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mt-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:empresas-list' %}">Empresas</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:empresa-detail' empresa.id %}">{{ empresa.nome_fantasia }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:modelos-list' empresa.id %}">Modelos</a></li>
+            <li class="breadcrumb-item active">Novo Modelo</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Novo Modelo de Cartão</h1>
+            <p class="text-muted">{{ empresa.nome_fantasia }}</p>
+        </div>
+    </div>
+
+    <!-- Mensagens -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        <!-- Formulário -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Informações do Modelo</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="nome" class="form-label">Nome do Modelo *</label>
+                            <input type="text" class="form-control" id="nome" name="nome" 
+                                   placeholder="Ex: Cartão Padrão Empresa" required>
+                            <div class="form-text">Nome identificador do modelo</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="descricao" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="descricao" name="descricao" 
+                                      rows="4" placeholder="Descrição opcional do modelo"></textarea>
+                            <div class="form-text">Informações adicionais sobre o modelo</div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="largura_mm" class="form-label">Largura (mm) *</label>
+                                    <input type="number" class="form-control" id="largura_mm" name="largura_mm" 
+                                           value="85.6" step="0.1" min="50" max="200" required>
+                                    <div class="form-text">Largura do cartão em milímetros</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="altura_mm" class="form-label">Altura (mm) *</label>
+                                    <input type="number" class="form-control" id="altura_mm" name="altura_mm" 
+                                           value="54.0" step="0.1" min="30" max="150" required>
+                                    <div class="form-text">Altura do cartão em milímetros</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>Criar Modelo
+                            </button>
+                            <a href="{% url 'web-gerente:modelos-list' empresa.id %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informações -->
+        <div class="col-lg-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Sobre Modelos</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">
+                        <strong>Dimensões Padrão:</strong><br>
+                        Cartão de crédito: 85.6 × 54.0 mm<br>
+                        Cartão PVC: 86 × 54 mm
+                    </p>
+                    <p class="small mb-2">
+                        <strong>Personalização:</strong><br>
+                        Após criar o modelo, você poderá personalizar o design com logo, cores e campos de dados.
+                    </p>
+                    <p class="small mb-0">
+                        <strong>Status:</strong><br>
+                        Modelos são criados inativos. Você deve ativá-lo manualmente para que a empresa possa utilizá-lo.
+                    </p>
+                </div>
+            </div>
+
+            <div class="card border-warning">
+                <div class="card-header bg-warning bg-opacity-10">
+                    <h6 class="mb-0 text-warning"><i class="bi bi-exclamation-triangle me-2"></i>Atenção</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-0">
+                        Certifique-se de que as dimensões estejam corretas antes de criar o modelo. 
+                        Após a criação, as dimensões podem ser editadas, mas isso pode afetar cartões já criados.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

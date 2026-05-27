@@ -1,0 +1,444 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalhes da Empresa - ClickID{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'web-gerente:dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'web-gerente:empresas-list' %}">Empresas</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Detalhes</li>
+            </ol>
+        </nav>
+        <h2><i class="bi bi-building"></i> Detalhes da Empresa</h2>
+    </div>
+    <div>
+        <a href="{% url 'web-gerente:empresa-edit' empresa.usuario.id %}" class="btn btn-warning">
+            <i class="bi bi-pencil"></i> Editar
+        </a>
+        <a href="{% url 'web-gerente:empresas-list' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+</div>
+
+{% if not empresa %}
+<div class="alert alert-danger">
+    <i class="bi bi-exclamation-triangle"></i> Empresa não encontrada.
+</div>
+{% else %}
+
+<!-- Informações Principais -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Informações Gerais</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Razão Social</label>
+                        <p class="fw-bold">{{ empresa.razao_social }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Nome Fantasia</label>
+                        <p class="fw-bold">{{ empresa.nome_fantasia|default:'-' }}</p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small">CNPJ</label>
+                        <p class="fw-bold">{{ empresa.cnpj }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">URL Personalizada</label>
+                        <p class="fw-bold">
+                            {% if empresa.url_personalizada %}
+                                <a href="https://clickid.com.br/{{ empresa.url_personalizada }}" target="_blank">
+                                    {{ empresa.url_personalizada }} <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Email</label>
+                        <p class="fw-bold">
+                            <i class="bi bi-envelope"></i> {{ empresa.usuario.email|default:'-' }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Telefone</label>
+                        <p class="fw-bold">
+                            <i class="bi bi-telephone"></i> {{ empresa.telefone|default:'-' }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <label class="text-muted small">Endereço</label>
+                        <p class="fw-bold" style="white-space: pre-line;">{{ empresa.endereco|default:'-' }}</p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Data de Cadastro</label>
+                        <p class="fw-bold">
+                            <i class="bi bi-calendar"></i> {{ empresa.data_cadastro|date:"d/m/Y H:i"|default:"-" }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Cadastrado Por</label>
+                        <p class="fw-bold">{{ empresa.cadastrado_por_email|default:'-' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="d-flex flex-column h-100">
+            <!-- Logo da Empresa -->
+            <div class="card mb-3">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="bi bi-image"></i> Logo</h5>
+                </div>
+                <div class="card-body text-center">
+                    {% if empresa.logo %}
+                        <img src="{{ empresa.logo }}" alt="Logo {{ empresa.razao_social }}" class="img-fluid rounded" style="max-height: 200px;">
+                    {% else %}
+                        <div class="p-5 bg-light rounded">
+                            <i class="bi bi-image" style="font-size: 4rem; color: #ccc;"></i>
+                            <p class="text-muted mt-2">Sem logo cadastrada</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Estatísticas Rápidas -->
+            <div class="card flex-grow-1">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Estatísticas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                        <div>
+                            <i class="bi bi-people text-primary" style="font-size: 2rem;"></i>
+                        </div>
+                        <div class="text-end">
+                            <p class="mb-0 text-muted small">Profissionais</p>
+                            <h3 class="mb-0">{{ empresa.total_profissionais|default:0 }}</h3>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                        <div>
+                            <i class="bi bi-diagram-3 text-success" style="font-size: 2rem;"></i>
+                        </div>
+                        <div class="text-end">
+                            <p class="mb-0 text-muted small">Departamentos</p>
+                            <h3 class="mb-0">{{ empresa.total_departamentos|default:0 }}</h3>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-credit-card text-warning" style="font-size: 2rem;"></i>
+                        </div>
+                        <div class="text-end">
+                            <p class="mb-0 text-muted small">Modelos</p>
+                            <h3 class="mb-0">{{ empresa.total_modelos|default:0 }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modelos -->
+<div class="card mb-4">
+    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-credit-card"></i> Modelos de Cartão</h5>
+        <a href="{% url 'web-gerente:modelos-list' empresa.usuario.id %}" class="btn btn-dark btn-sm">
+            <i class="bi bi-eye"></i> Ver Todos
+        </a>
+    </div>
+    <div class="card-body">
+        {% if empresa.modelos %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Dimensões</th>
+                        <th>Status</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for modelo in empresa.modelos %}
+                    <tr>
+                        <td>{{ modelo.nome }}</td>
+                        <td><small class="text-muted">{{ modelo.largura_mm }} × {{ modelo.altura_mm }} mm</small></td>
+                        <td>
+                            {% if modelo.is_active %}
+                                <span class="badge bg-success">Ativo</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inativo</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'web-gerente:modelo-detail' empresa.usuario.id modelo.id %}" 
+                               class="btn btn-sm btn-outline-primary" title="Ver detalhes">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'web-gerente:modelo-edit' empresa.usuario.id modelo.id %}" 
+                               class="btn btn-sm btn-outline-secondary" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center mb-0">Nenhum modelo cadastrado. 
+            <a href="{% url 'web-gerente:modelo-create' empresa.usuario.id %}">Criar primeiro modelo</a>
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Departamentos -->
+<div class="card mb-4">
+    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-diagram-3"></i> Departamentos</h5>
+        <a href="{% url 'web-gerente:departamento-create' empresa.usuario.id %}" class="btn btn-light btn-sm">
+            <i class="bi bi-plus-circle"></i> Novo Departamento
+        </a>
+    </div>
+    <div class="card-body">
+        {% if empresa.departamentos %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Profissionais</th>
+                        <th>Data Criação</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dept in empresa.departamentos %}
+                    <tr>
+                        <td>{{ dept.nome }}</td>
+                        <td><span class="badge bg-primary">{{ dept.total_profissionais|default:0 }}</span></td>
+                        <td>{{ dept.created_at|date:"d/m/Y" }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'web-gerente:departamento-detail' empresa.usuario.id dept.id %}" class="btn btn-sm btn-outline-primary" title="Ver detalhes">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'web-gerente:departamento-edit' empresa.usuario.id dept.id %}" class="btn btn-sm btn-outline-warning" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger" title="Excluir" data-bs-toggle="modal" data-bs-target="#deleteDeptModal{{ dept.id }}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    
+                    <!-- Modal de Exclusão Departamento -->
+                    <div class="modal fade" id="deleteDeptModal{{ dept.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Confirmar Exclusão</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>Tem certeza que deseja excluir o departamento <strong>{{ dept.nome }}</strong>?</p>
+                                    {% if dept.total_profissionais > 0 %}
+                                        <p class="text-warning"><i class="bi bi-exclamation-triangle"></i> Este departamento possui {{ dept.total_profissionais }} profissional(is) vinculado(s).</p>
+                                    {% endif %}
+                                    <p class="text-danger"><i class="bi bi-exclamation-triangle"></i> Esta ação não pode ser desfeita!</p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                    <form method="POST" action="{% url 'web-gerente:departamento-delete' empresa.usuario.id dept.id %}" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger">
+                                            <i class="bi bi-trash"></i> Confirmar Exclusão
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+            <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+            <p class="mt-2">Nenhum departamento cadastrado</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Profissionais -->
+<div class="card mb-4">
+    <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-people"></i> Profissionais</h5>
+        <div>
+            <a href="{% url 'web-gerente:profissional-import' empresa.usuario.id %}" class="btn btn-success btn-sm me-2">
+                <i class="bi bi-file-earmark-excel"></i> Importar Excel
+            </a>
+            <a href="{% url 'web-gerente:profissional-create' empresa.usuario.id %}" class="btn btn-light btn-sm">
+                <i class="bi bi-plus-circle"></i> Novo Profissional
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if empresa.profissionais %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>CPF</th>
+                        <th>Email</th>
+                        <th>Departamento</th>
+                        <th>Status</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for prof in empresa.profissionais %}
+                    <tr>
+                        <td>{{ prof.nome }}</td>
+                        <td>{{ prof.cpf }}</td>
+                        <td>{{ prof.email|default:'-' }}</td>
+                        <td>{{ prof.departamento_nome|default:'-' }}</td>
+                        <td>
+                            <form method="POST" action="{% url 'web-gerente:profissional-toggle-active' empresa.usuario.id prof.usuario %}" style="display: inline;">
+                                {% csrf_token %}
+                                {% if prof.is_active %}
+                                    <button type="submit" class="btn btn-sm btn-success" title="Ativo - Clique para desativar">
+                                        <i class="bi bi-check-circle-fill"></i> Ativo
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Inativo - Clique para ativar">
+                                        <i class="bi bi-x-circle-fill"></i> Inativo
+                                    </button>
+                                {% endif %}
+                            </form>
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'web-gerente:profissional-detail' empresa.usuario.id prof.usuario %}" class="btn btn-sm btn-outline-primary" title="Ver detalhes">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'web-gerente:profissional-edit' empresa.usuario.id prof.usuario %}" class="btn btn-sm btn-outline-warning" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger" title="Excluir" data-bs-toggle="modal" data-bs-target="#deleteProfModal{{ prof.usuario }}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    
+                    <!-- Modal de Exclusão Profissional -->
+                    <div class="modal fade" id="deleteProfModal{{ prof.usuario }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Confirmar Exclusão</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>Tem certeza que deseja excluir o profissional <strong>{{ prof.nome }}</strong>?</p>
+                                    <p class="text-danger"><i class="bi bi-exclamation-triangle"></i> Esta ação não pode ser desfeita!</p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                    <form method="POST" action="{% url 'web-gerente:profissional-delete' empresa.usuario.id prof.usuario %}" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger">
+                                            <i class="bi bi-trash"></i> Confirmar Exclusão
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+            <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+            <p class="mt-2">Nenhum profissional cadastrado</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Ações Adicionais -->
+<div class="card border-danger">
+    <div class="card-header bg-danger text-white">
+        <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Zona de Perigo</h5>
+    </div>
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h6>Desativar Empresa</h6>
+                <p class="text-muted mb-0">Esta ação impedirá o acesso da empresa ao sistema.</p>
+            </div>
+            <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#desativarModal">
+                <i class="bi bi-x-circle"></i> Desativar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação -->
+<div class="modal fade" id="desativarModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Confirmar Desativação</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja desativar a empresa <strong>{{ empresa.razao_social }}</strong>?</p>
+                <p class="text-muted">Esta ação impedirá que a empresa acesse o sistema.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{% url 'web-gerente:empresa-toggle-active' empresa.usuario.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-x-circle"></i> Confirmar Desativação
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+
+{% endblock %}

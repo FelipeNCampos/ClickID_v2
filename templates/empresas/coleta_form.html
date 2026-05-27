@@ -1,0 +1,484 @@
+{% extends 'base.html' %}
+
+{% block title %}Novo Pedido - ClickID{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-collection"></i> Novo Pedido de Dados</h2>
+    </div>
+    <a href="{% url 'web-empresa:coletas-list' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<form method="POST" id="coletaForm">
+    {% csrf_token %}
+    
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Informações Básicas -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Informações do Pedido</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="nome" class="form-label">Nome do Pedido *</label>
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            id="nome" 
+                            name="nome" 
+                            placeholder="Ex: Recadastramento 2025, Atualização de Fotos"
+                            required
+                            maxlength="200"
+                        >
+                        <small class="form-text text-muted">Dê um nome descritivo para o pedido</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label">Descrição (Opcional)</label>
+                        <textarea 
+                            class="form-control" 
+                            id="descricao" 
+                            name="descricao" 
+                            rows="3"
+                            placeholder="Descreva o objetivo deste pedido"
+                        ></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Pedido *</label>
+                        <div class="form-check mb-2">
+                            <input 
+                                class="form-check-input" 
+                                type="radio" 
+                                name="tipo_coleta" 
+                                id="tipo_modelo_ativo" 
+                                value="modelo_ativo"
+                                checked
+                                required
+                            >
+                            <label class="form-check-label" for="tipo_modelo_ativo">
+                                <strong>Modelo Ativo</strong>
+                                <br>
+                                <small class="text-muted">Usar todos os campos do modelo de cartão ativo da empresa</small>
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input 
+                                class="form-check-input" 
+                                type="radio" 
+                                name="tipo_coleta" 
+                                id="tipo_dados_extras" 
+                                value="dados_extras"
+                            >
+                            <label class="form-check-label" for="tipo_dados_extras">
+                                <strong>Dados Extras</strong>
+                                <br>
+                                <small class="text-muted">Coletar apenas foto e/ou assinatura (sem campos do modelo)</small>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info" role="alert">
+                        <i class="bi bi-info-circle"></i> <strong id="info_tipo_coleta">Modelo de Cartão:</strong> <span id="texto_info_tipo">O modelo ativo da sua empresa será usado automaticamente para esta coleta.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Campos Adicionais -->
+            <div class="card mb-4" id="card_campos_adicionais">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-camera"></i> <span id="titulo_campos">Campos Adicionais (Opcionais)</span></h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-check mb-3">
+                        <input 
+                            class="form-check-input campo-extra" 
+                            type="checkbox" 
+                            id="incluir_foto" 
+                            name="incluir_foto"
+                            value="true"
+                        >
+                        <label class="form-check-label" for="incluir_foto">
+                            <strong>Incluir Foto</strong>
+                            <br>
+                            <small class="text-muted">Solicitar foto do Cartão</small>
+                        </label>
+                    </div>
+
+                    <div class="form-check">
+                        <input 
+                            class="form-check-input campo-extra" 
+                            type="checkbox" 
+                            id="incluir_assinatura" 
+                            name="incluir_assinatura"
+                            value="true"
+                        >
+                        <label class="form-check-label" for="incluir_assinatura">
+                            <strong>Incluir Assinatura</strong>
+                            <br>
+                            <small class="text-muted">Solicitar assinatura digital do Cartão</small>
+                        </label>
+                    </div>
+                    
+                    <div class="alert alert-warning mt-3 mb-0" id="aviso_dados_extras" style="display: none;">
+                        <i class="bi bi-exclamation-triangle"></i> <strong>Atenção:</strong> Para o tipo "Dados Extras", você deve selecionar pelo menos Foto ou Assinatura.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Destinatários -->
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-people"></i> Destinatários do Pedido</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Quem deve participar deste pedido? *</label>
+                        
+                        <div class="form-check mb-2">
+                            <input 
+                                class="form-check-input" 
+                                type="radio" 
+                                name="tipo_destinatarios" 
+                                id="todos" 
+                                value="todos"
+                                checked
+                            >
+                            <label class="form-check-label" for="todos">
+                                <strong>Todos os Cartões</strong>
+                                <br>
+                                <small class="text-muted">Enviar para todos os cartões ativos da empresa</small>
+                            </label>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input 
+                                class="form-check-input" 
+                                type="radio" 
+                                name="tipo_destinatarios" 
+                                id="departamentos" 
+                                value="departamentos"
+                            >
+                            <label class="form-check-label" for="departamentos">
+                                <strong>Por Departamentos</strong>
+                                <br>
+                                <small class="text-muted">Selecionar departamentos específicos</small>
+                            </label>
+                        </div>
+
+                        <div class="form-check">
+                            <input 
+                                class="form-check-input" 
+                                type="radio" 
+                                name="tipo_destinatarios" 
+                                id="individuais" 
+                                value="individuais"
+                            >
+                            <label class="form-check-label" for="individuais">
+                                <strong>Cartões Específicos</strong>
+                                <br>
+                                <small class="text-muted">Selecionar cartões individualmente</small>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Seleção de Departamentos (oculto inicialmente) -->
+                    <div id="selecao_departamentos" class="mt-3" style="display: none;">
+                        <label class="form-label">Selecione os Departamentos:</label>
+                        <div class="list-group" style="max-height: 300px; overflow-y: auto;">
+                            {% for dept in departamentos %}
+                            <label class="list-group-item">
+                                <input 
+                                    class="form-check-input me-2" 
+                                    type="checkbox" 
+                                    name="departamentos_selecionados" 
+                                    value="{{ dept.id }}"
+                                >
+                                {{ dept.nome }}
+                                <small class="text-muted">({{ dept.total_profissionais|default:0 }} cartões)</small>
+                            </label>
+                            {% empty %}
+                            <div class="alert alert-info mb-0">
+                                Nenhum departamento cadastrado. 
+                                <a href="{% url 'web-empresa:departamento-create' %}" target="_blank">Criar departamento</a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Seleção de Profissionais (oculto inicialmente) -->
+                    <div id="selecao_profissionais" class="mt-3" style="display: none;">
+                        <label class="form-label">Selecione os Cartões:</label>
+                        <div class="mb-2">
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="busca_profissional" 
+                                placeholder="Buscar cartão por nome ou CPF..."
+                            >
+                        </div>
+                        <div class="list-group" style="max-height: 300px; overflow-y: auto;" id="lista_profissionais">
+                            {% for prof in profissionais %}
+                            <label class="list-group-item profissional-item" data-nome="{{ prof.nome|lower }}" data-cpf="{{ prof.cpf }}">
+                                <input 
+                                    class="form-check-input me-2" 
+                                    type="checkbox" 
+                                    name="profissionais_selecionados" 
+                                    value="{{ prof.usuario }}"
+                                >
+                                <strong>{{ prof.nome }}</strong>
+                                <br>
+                                <small class="text-muted">CPF: {{ prof.cpf }}</small>
+                                {% if prof.departamento_nome %}
+                                <br><small class="text-muted">Depto: {{ prof.departamento_nome }}</small>
+                                {% endif %}
+                            </label>
+                            {% empty %}
+                            <div class="alert alert-info mb-0">
+                                Nenhum cartão cadastrado. 
+                                <a href="{% url 'web-empresa:profissional-create' %}" target="_blank">Criar Cartão</a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botões de Ação -->
+            <div class="d-flex justify-content-between mb-4">
+                <a href="{% url 'web-empresa:coletas-list' %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-check-circle"></i> Criar e Iniciar Pedido
+                </button>
+            </div>
+        </div>
+
+        <!-- Sidebar com Informações -->
+        <div class="col-md-4">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="bi bi-info-circle"></i> Como Funciona</h6>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-info">Tipos de Pedido:</h6>
+                    <ul class="small">
+                        <li><strong>Modelo Ativo:</strong> Usa todos os campos do modelo de cartão ativo da empresa</li>
+                        <li><strong>Dados Extras:</strong> Pedido apenas foto e/ou assinatura (mínimo 1)</li>
+                    </ul>
+
+                    <hr>
+
+                    <h6 class="text-info">Destinatários:</h6>
+                    <ul class="small">
+                        <li><strong>Todos:</strong> Envia para todos os cartões ativos</li>
+                        <li><strong>Departamentos:</strong> Selecione departamentos específicos</li>
+                        <li><strong>Individuais:</strong> Escolha cartões um a um</li>
+                    </ul>
+
+                    <hr>
+
+                    <h6 class="text-info">Após Criar:</h6>
+                    <ul class="small mb-0">
+                        <li>O pedido iniciará automaticamente</li>
+                        <li>Cartões poderão acessar via app</li>
+                        <li>Acompanhe o progresso em tempo real</li>
+                        <li>Exporte os dados quando concluir</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card border-warning mt-3">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Importante</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">
+                        <strong>Modelo Ativo:</strong> Certifique-se de que sua empresa possui um modelo de cartão ativo.
+                    </p>
+                    <p class="small mb-0">
+                        <strong>Dados Extras:</strong> Pelo menos foto ou assinatura deve ser selecionada.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Controlar tipo de coleta
+const radioModeloAtivo = document.getElementById('tipo_modelo_ativo');
+const radioDadosExtras = document.getElementById('tipo_dados_extras');
+const cardCamposAdicionais = document.getElementById('card_campos_adicionais');
+const tituloCampos = document.getElementById('titulo_campos');
+const infoTipoColeta = document.getElementById('info_tipo_coleta');
+const textoInfoTipo = document.getElementById('texto_info_tipo');
+const avisoDadosExtras = document.getElementById('aviso_dados_extras');
+const checkFoto = document.getElementById('incluir_foto');
+const checkAssinatura = document.getElementById('incluir_assinatura');
+
+function atualizarTipoColeta() {
+    if (radioDadosExtras.checked) {
+        // Modo Dados Extras
+        tituloCampos.textContent = 'Dados a Coletar (Obrigatório selecionar pelo menos 1)';
+        cardCamposAdicionais.querySelector('.card-header').classList.remove('bg-success');
+        cardCamposAdicionais.querySelector('.card-header').classList.add('bg-warning', 'text-dark');
+        infoTipoColeta.textContent = 'Dados Extras:';
+        textoInfoTipo.textContent = 'Apenas foto e/ou assinatura serão solicitados. Os campos do modelo de cartão NÃO serão incluídos.';
+        avisoDadosExtras.style.display = 'block';
+        
+        // Tornar campos obrigatórios
+        checkFoto.classList.add('campo-extra');
+        checkAssinatura.classList.add('campo-extra');
+    } else {
+        // Modo Modelo Ativo
+        tituloCampos.textContent = 'Campos Adicionais (Opcionais)';
+        cardCamposAdicionais.querySelector('.card-header').classList.remove('bg-warning', 'text-dark');
+        cardCamposAdicionais.querySelector('.card-header').classList.add('bg-success', 'text-white');
+        infoTipoColeta.textContent = 'Modelo de Cartão:';
+        textoInfoTipo.textContent = 'O modelo ativo da sua empresa será usado automaticamente para esta coleta.';
+        avisoDadosExtras.style.display = 'none';
+        
+        // Remover obrigatoriedade
+        checkFoto.classList.remove('campo-extra');
+        checkAssinatura.classList.remove('campo-extra');
+    }
+}
+
+radioModeloAtivo.addEventListener('change', atualizarTipoColeta);
+radioDadosExtras.addEventListener('change', atualizarTipoColeta);
+
+// Controlar exibição de destinatários
+const radioTodos = document.getElementById('todos');
+const radioDepartamentos = document.getElementById('departamentos');
+const radioIndividuais = document.getElementById('individuais');
+const selecaoDepartamentos = document.getElementById('selecao_departamentos');
+const selecaoProfissionais = document.getElementById('selecao_profissionais');
+
+function atualizarSelecao() {
+    selecaoDepartamentos.style.display = 'none';
+    selecaoProfissionais.style.display = 'none';
+    
+    if (radioDepartamentos.checked) {
+        selecaoDepartamentos.style.display = 'block';
+    } else if (radioIndividuais.checked) {
+        selecaoProfissionais.style.display = 'block';
+    }
+}
+
+radioTodos.addEventListener('change', atualizarSelecao);
+radioDepartamentos.addEventListener('change', atualizarSelecao);
+radioIndividuais.addEventListener('change', atualizarSelecao);
+
+// Busca de profissionais
+const buscaProfissional = document.getElementById('busca_profissional');
+if (buscaProfissional) {
+    buscaProfissional.addEventListener('input', function() {
+        const termo = this.value.toLowerCase();
+        const items = document.querySelectorAll('.profissional-item');
+        
+        items.forEach(item => {
+            const nome = item.getAttribute('data-nome');
+            const cpf = item.getAttribute('data-cpf');
+            
+            if (nome.includes(termo) || cpf.includes(termo)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+}
+
+// Validação do formulário
+document.getElementById('coletaForm').addEventListener('submit', function(e) {
+    const tipoColeta = document.querySelector('input[name="tipo_coleta"]:checked').value;
+    
+    // Validar se há modelo ativo quando tipo for modelo_ativo
+    if (tipoColeta === 'modelo_ativo') {
+        const temModelo = {{ tem_modelo_ativo|lower }};
+        if (!temModelo) {
+            e.preventDefault();
+            // Exibir modal de aviso
+            const modal = new bootstrap.Modal(document.getElementById('modalSemModelo'));
+            modal.show();
+            return false;
+        }
+    }
+    
+    // Validar tipo Dados Extras
+    if (tipoColeta === 'dados_extras') {
+        const fotoMarcada = checkFoto.checked;
+        const assinaturaMarcada = checkAssinatura.checked;
+        
+        if (!fotoMarcada && !assinaturaMarcada) {
+            e.preventDefault();
+            alert('Para o tipo "Dados Extras", você deve selecionar pelo menos Foto ou Assinatura.');
+            return false;
+        }
+    }
+    
+    // Validar destinatários
+    const tipoDestinatarios = document.querySelector('input[name="tipo_destinatarios"]:checked').value;
+    
+    if (tipoDestinatarios === 'departamentos') {
+        const deptsSelecionados = document.querySelectorAll('input[name="departamentos_selecionados"]:checked');
+        if (deptsSelecionados.length === 0) {
+            e.preventDefault();
+            alert('Selecione pelo menos um departamento');
+            return false;
+        }
+    } else if (tipoDestinatarios === 'individuais') {
+        const profsSelecionados = document.querySelectorAll('input[name="profissionais_selecionados"]:checked');
+        if (profsSelecionados.length === 0) {
+            e.preventDefault();
+            alert('Selecione pelo menos um profissional');
+            return false;
+        }
+    }
+});
+</script>
+
+<!-- Modal de Aviso - Sem Modelo Ativo -->
+<div class="modal fade" id="modalSemModelo" tabindex="-1" aria-labelledby="modalSemModeloLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="modalSemModeloLabel">
+                    <i class="bi bi-exclamation-triangle"></i> Modelo Não Encontrado
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">
+                    <strong>Não há nenhum modelo de cartão ativo cadastrado para sua empresa.</strong>
+                </p>
+                <p class="mb-3">
+                    Para criar uma coleta do tipo "Modelo Ativo", é necessário ter um modelo de cartão ativo.
+                </p>
+                <p class="mb-0">
+                    <i class="bi bi-info-circle text-primary"></i> 
+                    <strong>Solução:</strong> Solicite ao gerente do sistema o cadastro de um modelo de cartão para sua empresa.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Fechar
+                </button>
+                <button type="button" class="btn btn-primary" onclick="document.getElementById('tipo_dados_extras').checked = true; document.getElementById('tipo_dados_extras').dispatchEvent(new Event('change')); bootstrap.Modal.getInstance(document.getElementById('modalSemModelo')).hide();">
+                    <i class="bi bi-arrow-right-circle"></i> Usar "Dados Extras"
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

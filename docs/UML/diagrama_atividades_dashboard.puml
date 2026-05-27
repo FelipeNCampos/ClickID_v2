@@ -1,0 +1,153 @@
+@startuml ClickID - Diagrama de Atividades: Dashboard do Gerente
+
+title Fluxo de Visualização e Análise no Dashboard do Gerente
+
+start
+
+:Gerente faz login;
+
+:Carregar Dashboard;
+
+fork
+    :Calcular métricas do mês atual;
+    :- Coletas em aberto
+    - Coletas concluídas
+    - Empresas ativas
+    - Coletas pendentes;
+fork again
+    :Calcular métricas do mês anterior;
+    :- Coletas abertas mês anterior
+    - Coletas concluídas mês anterior
+    - Empresas desativadas;
+fork again
+    :Gerar gráfico de análise;
+    :- Coletas iniciadas
+    - Coletas canceladas
+    - Coletas concluídas
+    - Coletas pendentes meses passados;
+end fork
+
+:Exibir Dashboard completo;
+
+repeat
+    :Gerente interage com dashboard;
+    
+    if (Ação do gerente?) then (Filtrar período)
+        :Selecionar período (1-30 dias);
+        :Atualizar gráficos com filtro;
+        :Recalcular métricas;
+        
+    elseif (Ver empresas) then (Listar empresas)
+        :Abrir aba de empresas;
+        
+        if (Aplicar filtros?) then (Sim)
+            :Filtrar por status (ativa/inativa);
+            :Ordenar por interações;
+        endif
+        
+        :Exibir lista de empresas;
+        
+        if (Clicar em empresa?) then (Sim)
+            :Abrir perfil da empresa;
+            :Exibir dados cadastrais;
+            :Exibir histórico de coletas;
+            
+            if (Clicar em coleta?) then (Sim)
+                :Abrir detalhes da coleta;
+                :Exibir status e percentual;
+                :Listar profissionais (pendentes/concluídos);
+                
+                if (Baixar dados?) then (Sim)
+                    fork
+                        :Baixar Excel com respostas;
+                    fork again
+                        :Baixar fotos (ZIP);
+                    fork again
+                        :Baixar assinaturas (ZIP);
+                    fork again
+                        :Baixar lista de pendentes;
+                    fork again
+                        :Baixar lista de concluídos;
+                    end fork
+                    
+                    :Gerar arquivos assíncronos;
+                    :Notificar quando pronto;
+                endif
+            endif
+        endif
+        
+    elseif (Ver logs) then (Auditoria)
+        :Abrir aba de histórico;
+        
+        if (Aplicar filtros?) then (Sim)
+            :Filtrar por tipo de ação;
+            :Filtrar por empresa;
+            :Filtrar por período;
+        endif
+        
+        :Exibir logs de auditoria;
+        
+        if (Exportar logs?) then (Sim)
+            :Gerar relatório CSV/Excel;
+            :Download do arquivo;
+        endif
+        
+    elseif (Criar coleta) then (Nova coleta)
+        :Selecionar empresa;
+        :Selecionar modelo de cartão;
+        
+        if (Tipo de segmentação?) then (Excel)
+            :Upload arquivo Excel (CPF, Nome);
+            :Validar CPFs;
+            :Cadastrar profissionais novos;
+            :Vincular à coleta;
+            
+        elseif (Departamento) then
+            :Selecionar departamentos;
+            :Listar profissionais dos departamentos;
+            :Vincular à coleta;
+            
+        elseif (Seleção manual) then
+            :Listar profissionais da empresa;
+            :Selecionar individualmente (checkbox);
+            :Vincular selecionados à coleta;
+            
+        else (Toda empresa)
+            :Selecionar todos profissionais ativos;
+            :Vincular à coleta;
+        endif
+        
+        :Criar coleta;
+        :Enviar notificações em lote;
+        :Registrar log de auditoria;
+        :Exibir confirmação;
+        
+    elseif (Gerenciar modelos) then (Modelos)
+        :Abrir gestão de modelos;
+        
+        if (Ação?) then (Criar)
+            :Adicionar campos ao modelo;
+            :Configurar obrigatoriedade;
+            :Definir foto/assinatura;
+            :Salvar modelo;
+            
+        elseif (Editar) then
+            :Selecionar modelo existente;
+            :Modificar campos;
+            :Salvar alterações;
+            
+        else (Ativar/Desativar)
+            :Alterar status do modelo;
+        endif
+        
+    else (Atualizar dashboard)
+        :Recarregar métricas em tempo real;
+    endif
+
+repeat while (Continuar usando dashboard?) is (Sim)
+
+:Fazer logout;
+
+stop
+
+@enduml

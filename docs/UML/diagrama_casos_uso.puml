@@ -1,0 +1,168 @@
+@startuml ClickID - Diagrama de Casos de Uso
+
+left to right direction
+skinparam packageStyle rectangle
+
+' ==================== ATORES ====================
+actor "Gerente" as gerente
+actor "Empresa" as empresa
+actor "Profissional" as profissional
+actor "Sistema de Email" as email <<Sistema>>
+actor "Serviço de Armazenamento" as storage <<Sistema>>
+
+' ==================== CASOS DE USO - GERENTE ====================
+package "Sistema de Coleta de Dados - ClickID" {
+    
+    package "Gestão de Usuários" {
+        usecase "UC-01: Realizar Login" as UC01
+        usecase "UC-02: Cadastrar Gerente" as UC02
+        usecase "UC-03: Cadastrar Empresa" as UC03
+        usecase "UC-04: Ativar/Desativar Empresa" as UC04
+        usecase "UC-05: Cadastrar Profissional" as UC05
+        usecase "UC-06: Importar Profissionais via Excel" as UC06
+        usecase "UC-07: Recuperar Senha" as UC07
+        usecase "UC-08: Alterar Senha" as UC08
+    }
+    
+    package "Gestão de Modelos" {
+        usecase "UC-09: Criar Modelo de Cartão" as UC09
+        usecase "UC-10: Editar Modelo" as UC10
+        usecase "UC-11: Ativar/Desativar Modelo" as UC11
+        usecase "UC-12: Adicionar Campos ao Modelo" as UC12
+    }
+    
+    package "Gestão de Coletas" {
+        usecase "UC-13: Iniciar Coleta" as UC13
+        usecase "UC-14: Cancelar Coleta" as UC14
+        usecase "UC-15: Visualizar Detalhes da Coleta" as UC15
+        usecase "UC-16: Baixar Dados da Coleta" as UC16
+        usecase "UC-17: Baixar Mídias (Fotos/Assinaturas)" as UC17
+        usecase "UC-18: Iniciar Coleta Segmentada" as UC18
+    }
+    
+    package "Organização" {
+        usecase "UC-19: Criar Departamento" as UC19
+        usecase "UC-20: Vincular Profissional a Departamento" as UC20
+        usecase "UC-21: Listar Profissionais por Departamento" as UC21
+    }
+    
+    package "Dashboard e Relatórios" {
+        usecase "UC-22: Visualizar Dashboard do Gerente" as UC22
+        usecase "UC-23: Visualizar Dashboard da Empresa" as UC23
+        usecase "UC-24: Visualizar Logs de Auditoria" as UC24
+        usecase "UC-25: Exportar Relatórios" as UC25
+        usecase "UC-26: Aplicar Filtros em Gráficos" as UC26
+    }
+    
+    package "Preenchimento de Formulários" {
+        usecase "UC-27: Acessar Portal da Empresa" as UC27
+        usecase "UC-28: Realizar Primeiro Login" as UC28
+        usecase "UC-29: Visualizar Formulários Pendentes" as UC29
+        usecase "UC-30: Preencher Formulário de Dados" as UC30
+        usecase "UC-31: Capturar Foto" as UC31
+        usecase "UC-32: Assinar Digitalmente" as UC32
+        usecase "UC-33: Salvar Rascunho" as UC33
+        usecase "UC-34: Finalizar Formulário" as UC34
+        usecase "UC-35: Visualizar Histórico" as UC35
+    }
+    
+    package "Notificações" {
+        usecase "UC-36: Enviar Notificação de Coleta" as UC36
+        usecase "UC-37: Enviar Lembrete de Pendência" as UC37
+        usecase "UC-38: Reenviar Notificação" as UC38
+    }
+}
+
+' ==================== RELACIONAMENTOS GERENTE ====================
+gerente --> UC01
+gerente --> UC02
+gerente --> UC03
+gerente --> UC04
+gerente --> UC09
+gerente --> UC10
+gerente --> UC11
+gerente --> UC13
+gerente --> UC14
+gerente --> UC15
+gerente --> UC16
+gerente --> UC17
+gerente --> UC22
+gerente --> UC24
+gerente --> UC25
+
+' ==================== RELACIONAMENTOS EMPRESA ====================
+empresa --> UC01
+empresa --> UC05
+empresa --> UC06
+empresa --> UC13
+empresa --> UC15
+empresa --> UC16
+empresa --> UC17
+empresa --> UC18
+empresa --> UC19
+empresa --> UC20
+empresa --> UC21
+empresa --> UC23
+empresa --> UC38
+
+' ==================== RELACIONAMENTOS PROFISSIONAL ====================
+profissional --> UC27
+profissional --> UC28
+profissional --> UC29
+profissional --> UC30
+profissional --> UC31
+profissional --> UC32
+profissional --> UC33
+profissional --> UC34
+profissional --> UC35
+profissional --> UC07
+
+' ==================== RELACIONAMENTOS SISTEMAS ====================
+UC36 ..> email : <<comunica>>
+UC37 ..> email : <<comunica>>
+UC38 ..> email : <<comunica>>
+UC07 ..> email : <<comunica>>
+
+UC31 ..> storage : <<armazena>>
+UC32 ..> storage : <<armazena>>
+UC17 ..> storage : <<recupera>>
+
+' ==================== EXTENSÕES E INCLUSÕES ====================
+UC13 .> UC12 : <<include>>
+UC13 .> UC36 : <<include>>
+UC28 .> UC08 : <<include>>
+UC34 .> UC36 : <<include>>
+
+UC06 .> UC05 : <<extend>>
+UC18 .> UC13 : <<extend>>
+UC26 .> UC22 : <<extend>>
+UC26 .> UC23 : <<extend>>
+
+UC30 ..> UC33 : <<extend>>
+UC31 ..> UC33 : <<extend>>
+UC32 ..> UC33 : <<extend>>
+
+' ==================== NOTAS ====================
+note right of UC13
+    Pode ser iniciada por
+    Gerente ou Empresa
+end note
+
+note right of UC18
+    Permite segmentar por:
+    - Toda Empresa
+    - Departamentos
+    - Profissionais Específicos
+end note
+
+note bottom of UC06
+    Importação em lote
+    via arquivo Excel
+end note
+
+note bottom of UC28
+    Senha padrão: 4 últimos
+    dígitos do CPF
+end note
+
+@enduml

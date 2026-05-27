@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalhes do Departamento - ClickID{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'web-gerente:dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'web-gerente:empresas-list' %}">Empresas</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'web-gerente:empresa-detail' empresa.usuario.id %}">{{ empresa.razao_social }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Departamento</li>
+            </ol>
+        </nav>
+        <h2><i class="bi bi-diagram-3"></i> Detalhes do Departamento</h2>
+    </div>
+    <div>
+        <a href="{% url 'web-gerente:departamento-edit' empresa.usuario.id departamento.id %}" class="btn btn-warning">
+            <i class="bi bi-pencil"></i> Editar
+        </a>
+        <a href="{% url 'web-gerente:empresa-detail' empresa.usuario.id %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar
+        </a>
+    </div>
+</div>
+
+{% if not departamento %}
+<div class="alert alert-danger">
+    <i class="bi bi-exclamation-triangle"></i> Departamento não encontrado.
+</div>
+{% else %}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Informações do Departamento</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Nome</label>
+                        <p class="fw-bold">{{ departamento.nome }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Empresa</label>
+                        <p class="fw-bold">{{ empresa.razao_social }}</p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <label class="text-muted small">Descrição</label>
+                        <p class="fw-bold">{{ departamento.descricao|default:'-' }}</p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Data de Criação</label>
+                        <p class="fw-bold">
+                            <i class="bi bi-calendar"></i> {{ departamento.created_at|date:"d/m/Y H:i" }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Total de Profissionais</label>
+                        <p class="fw-bold">
+                            <i class="bi bi-people"></i> {{ departamento.total_profissionais|default:0 }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Estatísticas</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <i class="bi bi-people text-primary" style="font-size: 3rem;"></i>
+                    <h2 class="mb-0 mt-2">{{ departamento.total_profissionais|default:0 }}</h2>
+                    <p class="text-muted">Profissionais</p>
+                </div>
+                <hr>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'web-gerente:profissional-create' empresa.usuario.id %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Adicionar Profissional
+                    </a>
+                    <a href="{% url 'web-gerente:departamento-edit' empresa.usuario.id departamento.id %}" class="btn btn-warning">
+                        <i class="bi bi-pencil"></i> Editar Departamento
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+{% endblock %}

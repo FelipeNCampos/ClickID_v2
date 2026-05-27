@@ -1,0 +1,1742 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Editor Canvas - {{ modelo.nome }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Canvas Container */
+    .canvas-workspace {
+        display: flex;
+        height: calc(100vh - 200px);
+        gap: 20px;
+    }
+    
+    /* Canvas Area */
+    .canvas-container {
+        flex: 1;
+        background: #f8f9fa;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        padding: 40px;
+        overflow: auto;
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .canvas-card {
+        position: relative;
+        background: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border: 1px solid #ddd;
+    }
+    
+    /* Campo no Canvas */
+    .campo-canvas {
+        position: absolute;
+        border: 2px dashed #0d6efd;
+        background: rgba(13, 110, 253, 0.05);
+        cursor: move;
+        padding: 4px;
+        min-width: 20px;
+        min-height: 15px;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 4px;
+        overflow: hidden;
+    }
+    
+    /* Campos visuais (foto, assinatura, etc) */
+    .campo-canvas[data-tipo="foto"],
+    .campo-canvas[data-tipo="assinatura"],
+    .campo-canvas[data-tipo="qr_code"],
+    .campo-canvas[data-tipo="codigo_barras"],
+    .campo-canvas[data-tipo="imagem_estatica"] {
+        justify-content: center;
+        background: rgba(13, 110, 253, 0.08);
+    }
+    
+    .campo-canvas:hover {
+        border-color: #0a58ca;
+        background: rgba(13, 110, 253, 0.1);
+        z-index: 10;
+    }
+    
+    .campo-canvas.selected {
+        border-color: #198754;
+        background: rgba(25, 135, 84, 0.1);
+        box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.2);
+        z-index: 20;
+    }
+    
+    .campo-canvas .resize-handle {
+        position: absolute;
+        bottom: -4px;
+        right: -4px;
+        width: 16px;
+        height: 16px;
+        background: #0d6efd;
+        border: 2px solid white;
+        border-radius: 50%;
+        cursor: nwse-resize;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        z-index: 100;
+    }
+    
+    .campo-canvas .resize-handle:hover {
+        background: #0a58ca;
+        transform: scale(1.2);
+    }
+    
+    .campo-label {
+        font-size: 10px;
+        background: #0d6efd;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 3px;
+        position: absolute;
+        top: -20px;
+        left: 0;
+        white-space: nowrap;
+    }
+    
+    /* Fields Library */
+    .fields-library {
+        width: 280px;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        overflow-y: auto;
+    }
+    
+    .field-item {
+        padding: 10px;
+        margin-bottom: 8px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        cursor: grab;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .field-item:hover {
+        background: #e9ecef;
+        border-color: #0d6efd;
+        transform: translateX(5px);
+    }
+    
+    .field-item:active {
+        cursor: grabbing;
+    }
+    
+    .field-icon {
+        font-size: 20px;
+        color: #0d6efd;
+    }
+    
+    /* Properties Panel */
+    .properties-panel {
+        width: 320px;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        overflow-y: auto;
+    }
+    
+    .properties-panel .form-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 4px;
+    }
+    
+    .properties-panel .form-control,
+    .properties-panel .form-select {
+        font-size: 13px;
+        padding: 6px 10px;
+    }
+    
+    .property-section {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .property-section:last-child {
+        border-bottom: none;
+    }
+    
+    .property-section h6 {
+        font-size: 13px;
+        font-weight: 700;
+        color: #212529;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+    }
+    
+    /* Toolbar */
+    .canvas-toolbar {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 15px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    
+    .zoom-controls {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+    }
+    
+    .ruler {
+        position: absolute;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+    }
+    
+    .ruler-h {
+        top: 0;
+        left: 30px;
+        right: 0;
+        height: 30px;
+    }
+    
+    .ruler-v {
+        left: 0;
+        top: 30px;
+        bottom: 0;
+        width: 30px;
+    }
+    
+    /* Fix breadcrumb separators */
+    .breadcrumb-item + .breadcrumb-item::before {
+        content: "/" !important;
+        padding: 0 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mt-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:empresas-list' %}">Empresas</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:empresa-detail' empresa.id %}">{{ empresa.nome_fantasia }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:modelos-list' empresa.id %}">Modelos</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:modelo-detail' empresa.id modelo.id %}">{{ modelo.nome }}</a></li>
+            <li class="breadcrumb-item active">Editor Canvas</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h4 mb-0">
+                <i class="bi bi-palette me-2"></i>Editor Canvas - {{ modelo.nome }}
+            </h1>
+            <p class="text-muted small mb-0">{{ empresa.nome_fantasia }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-success" id="btnSave">
+                <i class="bi bi-check-circle me-2"></i>Salvar Alterações
+            </button>
+            <a href="{% url 'web-gerente:modelo-detail' empresa.id modelo.id %}" class="btn btn-secondary">
+                <i class="bi bi-x-circle me-2"></i>Fechar
+            </a>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="canvas-toolbar">
+        <div class="zoom-controls">
+            <span class="badge bg-info me-3">
+                <i class="bi bi-credit-card"></i> Padrão CR-80: 85.6×54mm
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnZoomOut">
+                <i class="bi bi-zoom-out"></i>
+            </button>
+            <span class="badge bg-secondary" id="zoomLevel">100%</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnZoomIn">
+                <i class="bi bi-zoom-in"></i>
+            </button>
+        </div>
+        <div class="vr"></div>
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-sm btn-primary" id="btnFrente" onclick="canvasEditor.toggleLado('frente')">
+                <i class="bi bi-card-heading"></i> Frente
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btnVerso" onclick="canvasEditor.toggleLado('verso')">
+                <i class="bi bi-card-text"></i> Verso
+            </button>
+        </div>
+        <div class="vr"></div>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="btnBackgroundSettings" data-bs-toggle="modal" data-bs-target="#backgroundModal">
+            <i class="bi bi-image me-1"></i>Fundo do Cartão
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="btnGrid">
+            <i class="bi bi-grid-3x3 me-1"></i>Grade
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="btnRulers">
+            <i class="bi bi-rulers me-1"></i>Réguas
+        </button>
+        <div class="vr"></div>
+        <span class="text-muted small">
+            <i class="bi bi-info-circle me-1"></i>
+            Dimensões: {{ modelo.largura_mm }}mm × {{ modelo.altura_mm }}mm
+        </span>
+    </div>
+
+    <!-- Workspace -->
+    <div class="canvas-workspace">
+        <!-- Fields Library -->
+        <div class="fields-library">
+            <h6 class="mb-3"><i class="bi bi-collection me-2"></i>Biblioteca de Campos</h6>
+            
+            <div class="field-item" data-tipo="texto_curto">
+                <i class="bi bi-input-cursor field-icon"></i>
+                <div>
+                    <div class="fw-bold">Texto Curto</div>
+                    <small class="text-muted">Nome, Cargo, etc</small>
+                </div>
+            </div>
+            
+            <div class="field-item" data-tipo="texto_longo">
+                <i class="bi bi-textarea-t field-icon"></i>
+                <div>
+                    <div class="fw-bold">Texto Longo</div>
+                    <small class="text-muted">Descrição, Bio</small>
+                </div>
+            </div>
+            
+            <div class="field-item" data-tipo="cpf">
+                <i class="bi bi-person-badge field-icon"></i>
+                <div>
+                    <div class="fw-bold">CPF</div>
+                    <small class="text-muted">Documento</small>
+                </div>
+            </div>
+            
+            <div class="field-item" data-tipo="email">
+                <i class="bi bi-envelope field-icon"></i>
+                <div>
+                    <div class="fw-bold">E-mail</div>
+                    <small class="text-muted">Contato</small>
+                </div>
+            </div>
+            
+            <div class="field-item" data-tipo="telefone">
+                <i class="bi bi-telephone field-icon"></i>
+                <div>
+                    <div class="fw-bold">Telefone</div>
+                    <small class="text-muted">Celular/Fixo</small>
+                </div>
+            </div>
+            
+            <div class="field-item" data-tipo="foto">
+                <i class="bi bi-camera field-icon"></i>
+                <div>
+                    <div class="fw-bold">Foto</div>
+                    <small class="text-muted">Imagem 3x4</small>
+                </div>
+            </div>
+            
+            <div class="field-item" data-tipo="assinatura">
+                <i class="bi bi-pencil-square field-icon"></i>
+                <div>
+                    <div class="fw-bold">Assinatura</div>
+                    <small class="text-muted">Digital</small>
+                </div>
+            </div>
+            
+            <div class="field-item" data-tipo="qr_code">
+                <i class="bi bi-qr-code field-icon"></i>
+                <div>
+                    <div class="fw-bold">QR Code</div>
+                    <small class="text-muted">Código QR</small>
+                </div>
+            </div>
+            
+            <div class="field-item" data-tipo="codigo_barras">
+                <i class="bi bi-upc-scan field-icon"></i>
+                <div>
+                    <div class="fw-bold">Código Barras</div>
+                    <small class="text-muted">Barcode</small>
+                </div>
+            </div>
+            
+            <div class="field-item" data-tipo="imagem_estatica">
+                <i class="bi bi-image field-icon"></i>
+                <div>
+                    <div class="fw-bold">Imagem Estática</div>
+                    <small class="text-muted">Logo, Marca</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas Area - Padrão CR-80 (85.6mm × 54mm) -->
+        <div class="canvas-container" id="canvasContainer">
+            <div class="canvas-card" id="canvas" 
+                 style="width: 85.6mm; height: 54mm; border-radius: 3mm; background-color: {{ modelo.background_color|default:'#FFFFFF' }}; {% if modelo.background_image %}background-image: url('{{ modelo.background_image.url }}'); background-size: cover;{% endif %}"
+                 data-largura="85.6"
+                 data-altura="54">
+                <!-- Campos serão carregados via JavaScript -->
+            </div>
+        </div>
+
+        <!-- Properties Panel -->
+        <div class="properties-panel" id="propertiesPanel">
+            <h6 class="mb-3"><i class="bi bi-sliders me-2"></i>Propriedades</h6>
+            
+            <div id="noSelection" class="text-center text-muted py-5">
+                <i class="bi bi-cursor display-4 mb-3"></i>
+                <p>Selecione um campo no canvas para editar suas propriedades</p>
+            </div>
+            
+            <div id="fieldProperties" style="display: none;">
+                <!-- Basic Info -->
+                <div class="property-section">
+                    <h6>Informações Básicas</h6>
+                    <div class="mb-2">
+                        <label class="form-label">Nome do Campo</label>
+                        <input type="text" class="form-control form-control-sm" id="propNome" placeholder="ex: Nome Completo">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Tipo de Campo</label>
+                        <input type="text" class="form-control form-control-sm" id="propTipo" disabled>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="propObrigatorio">
+                        <label class="form-check-label" for="propObrigatorio">Campo Obrigatório</label>
+                    </div>
+                </div>
+
+                <!-- Position & Size -->
+                <div class="property-section">
+                    <h6>Posição e Tamanho</h6>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label">X (mm)</label>
+                            <input type="number" class="form-control form-control-sm" id="propX" step="0.1" min="0">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Y (mm)</label>
+                            <input type="number" class="form-control form-control-sm" id="propY" step="0.1" min="0">
+                        </div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label">Largura (mm)</label>
+                            <input type="number" class="form-control form-control-sm" id="propLargura" step="0.1" min="1">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Altura (mm)</label>
+                            <input type="number" class="form-control form-control-sm" id="propAltura" step="0.1" min="1">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Text Style -->
+                <div class="property-section">
+                    <h6>Estilo de Texto</h6>
+                    <div class="mb-2">
+                        <label class="form-label">Fonte</label>
+                        <select class="form-select form-select-sm" id="propFonte">
+                            <option value="Arial">Arial</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                            <option value="Courier New">Courier New</option>
+                            <option value="Georgia">Georgia</option>
+                            <option value="Verdana">Verdana</option>
+                            <option value="Tahoma">Tahoma</option>
+                        </select>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label">Tamanho (pt)</label>
+                            <input type="number" class="form-control form-control-sm" id="propTamanhoFonte" min="6" max="72">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Cor</label>
+                            <input type="color" class="form-control form-control-sm form-control-color" id="propCor">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Alinhamento</label>
+                        <select class="form-select form-select-sm" id="propAlinhamento">
+                            <option value="left">Esquerda</option>
+                            <option value="center">Centro</option>
+                            <option value="right">Direita</option>
+                            <option value="justify">Justificado</option>
+                        </select>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="propNegrito">
+                            <label class="form-check-label" for="propNegrito">Negrito</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="propItalico">
+                            <label class="form-check-label" for="propItalico">Itálico</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Configuration -->
+                <div class="property-section">
+                    <h6>Configuração do Formulário</h6>
+                    <div class="mb-2">
+                        <label class="form-label">Pergunta</label>
+                        <input type="text" class="form-control form-control-sm" id="propPergunta" 
+                               placeholder="Como esta pergunta aparecerá no formulário?">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Placeholder</label>
+                        <input type="text" class="form-control form-control-sm" id="propPlaceholder" 
+                               placeholder="Texto de exemplo">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Texto de Ajuda</label>
+                        <input type="text" class="form-control form-control-sm" id="propAjuda" 
+                               placeholder="Instrução adicional">
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-sm btn-primary" id="btnApplyProperties">
+                        <i class="bi bi-check-circle me-1"></i>Aplicar Mudanças
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger" id="btnDeleteField">
+                        <i class="bi bi-trash me-1"></i>Excluir Campo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Configuração de Fundo -->
+<div class="modal fade" id="backgroundModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-image me-2"></i>Configurar Fundo - <span id="ladoAtual">Frente</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info small mb-3">
+                    <i class="bi bi-info-circle me-1"></i>
+                    <strong>Atenção:</strong> Você está configurando o fundo da <strong id="ladoAtualTexto">frente</strong> do cartão.
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Cor de Fundo</label>
+                    <input type="color" class="form-control form-control-color w-100" id="backgroundColor" value="{{ modelo.background_color|default:'#FFFFFF' }}">
+                    <small class="text-muted">Escolha uma cor sólida para o fundo</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Imagem de Fundo</label>
+                    <input type="file" class="form-control" id="backgroundImage" accept="image/*">
+                    <small class="text-muted">Envie uma imagem (PNG, JPG) para usar como fundo</small>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-sm btn-danger" id="btnRemoveBackgroundImage">
+                            <i class="bi bi-trash"></i> Remover Imagem de Fundo
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning small">
+                    <i class="bi bi-lightbulb me-1"></i>
+                    <strong>Dica:</strong> Use imagens em alta resolução (300 DPI) para melhor qualidade de impressão.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnApplyBackground">Aplicar Fundo</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Loading -->
+<div class="modal fade" id="loadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+                <h5 id="loadingTitle">Carregando Editor...</h5>
+                <p class="text-muted mb-0" id="loadingMessage">Preparando área de trabalho</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Sucesso -->
+<div class="modal fade" id="successModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-check-circle me-2"></i>Sucesso
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="successMessage">Operação realizada com sucesso!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle me-2"></i><span id="confirmTitle">Confirmar Ação</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage">Tem certeza que deseja continuar?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning" id="confirmYes">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden data -->
+<input type="hidden" id="empresaId" value="{{ empresa.id }}">
+<input type="hidden" id="modeloId" value="{{ modelo.id }}">
+<input type="hidden" id="csrfToken" value="{{ csrf_token }}">
+<input type="hidden" id="authToken" value="{{ request.session.access_token }}">
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.19/dist/interact.min.js"></script>
+<script>
+// Canvas Editor JavaScript será implementado a seguir
+const canvasEditor = {
+    canvas: null,
+    selectedField: null,
+    zoom: 1,
+    fields: [],
+    currentLado: 'frente', // Controle do lado atual (frente ou verso)
+    backgrounds: {
+        frente: {
+            color: '{{ modelo.background_color|default:"#FFFFFF" }}',
+            image: {% if modelo.background_image %}'{{ modelo.background_image.url }}'{% else %}null{% endif %}
+        },
+        verso: {
+            color: '{{ modelo.background_color_verso|default:"#FFFFFF" }}',
+            image: {% if modelo.background_image_verso %}"{{ modelo.background_image_verso }}"{% else %}null{% endif %}
+        }
+    },
+    
+    async init() {
+        console.log('🚀 Iniciando canvas editor...');
+        
+        // Mostrar modal de loading
+        const loadingModalElement = document.getElementById('loadingModal');
+        const loadingModal = new bootstrap.Modal(loadingModalElement);
+        
+        try {
+            loadingModal.show();
+            
+            this.updateLoadingMessage('Inicializando editor...', 'Configurando área de trabalho');
+            
+            this.canvas = document.getElementById('canvas');
+            this.currentLado = 'frente'; // Definir lado inicial
+            
+            this.updateLoadingMessage('Configurando interações...', 'Preparando ferramentas de edição');
+            this.setupDragAndDrop();
+            this.setupInteractions();
+            this.setupEventListeners();
+            
+            this.updateLoadingMessage('Carregando campos existentes...', 'Buscando dados salvos do modelo');
+            await this.loadExistingFields(); // Aguardar carregamento dos campos
+            
+            this.updateLoadingMessage('Aplicando configurações visuais...', 'Carregando fundos e estilos');
+            this.applyCurrentBackground(); // Aplicar background inicial do lado correto
+            
+            this.updateLoadingMessage('Finalizando...', 'Quase pronto!');
+            this.toggleLado('frente'); // Atualizar UI dos botões e mostrar campos da frente
+            
+            // Fechar modal de loading
+            setTimeout(() => {
+                loadingModal.hide();
+                console.log('✅ Canvas editor inicializado!');
+            }, 500);
+            
+        } catch (error) {
+            console.error('❌ Erro ao inicializar editor:', error);
+            // Garantir que o modal feche mesmo com erro
+            setTimeout(() => {
+                loadingModal.hide();
+                alert('Erro ao carregar editor: ' + error.message);
+            }, 500);
+        }
+    },
+    
+    updateLoadingMessage(title, details) {
+        const titleEl = document.getElementById('loadingTitle');
+        const messageEl = document.getElementById('loadingMessage');
+        if (titleEl) titleEl.textContent = title;
+        if (messageEl) messageEl.textContent = details;
+    },
+    
+    // Funções auxiliares para modais
+    showSuccess(title, message) {
+        const messageEl = document.getElementById('successMessage');
+        if (messageEl) messageEl.textContent = message;
+        const modalEl = document.getElementById('successModal');
+        if (modalEl) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+    },
+    
+    showError(title, message) {
+        document.getElementById('errorTitle').textContent = title;
+        document.getElementById('errorMessage').textContent = message;
+        const modal = new bootstrap.Modal(document.getElementById('errorModal'));
+        modal.show();
+    },
+    
+    showConfirm(title, message, callback) {
+        const titleEl = document.getElementById('confirmTitle');
+        const messageEl = document.getElementById('confirmMessage');
+        const modalEl = document.getElementById('confirmModal');
+        const confirmBtn = document.getElementById('confirmYes');
+        
+        if (!titleEl || !messageEl || !modalEl || !confirmBtn) {
+            console.error('Elementos do modal de confirmação não encontrados');
+            // Fallback para confirm nativo
+            if (confirm(message)) {
+                callback();
+            }
+            return;
+        }
+        
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        const modal = new bootstrap.Modal(modalEl);
+        
+        // Remover listeners antigos
+        const newBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
+        
+        // Adicionar novo listener
+        newBtn.addEventListener('click', () => {
+            modal.hide();
+            callback();
+        });
+        
+        modal.show();
+    },
+    
+    setupDragAndDrop() {
+        // Arrastar campos da biblioteca para o canvas
+        const fieldItems = document.querySelectorAll('.field-item');
+        fieldItems.forEach(item => {
+            item.addEventListener('click', () => {
+                this.addFieldToCanvas(item.dataset.tipo);
+            });
+        });
+    },
+    
+    setupInteractions() {
+        // Configurar interact.js para drag, resize e rotate
+        interact('.campo-canvas')
+            .draggable({
+                inertia: false,
+                modifiers: [
+                    interact.modifiers.restrictRect({
+                        restriction: 'parent',
+                        endOnly: true
+                    })
+                ],
+                autoScroll: true,
+                listeners: {
+                    move: this.dragMoveListener.bind(this),
+                }
+            })
+            .resizable({
+                edges: { 
+                    left: false, 
+                    right: '.resize-handle', 
+                    bottom: '.resize-handle', 
+                    top: false 
+                },
+                listeners: {
+                    move: this.resizeMoveListener.bind(this)
+                },
+                modifiers: [
+                    interact.modifiers.restrictEdges({
+                        outer: 'parent'
+                    }),
+                    interact.modifiers.restrictSize({
+                        min: { width: 20, height: 10 }
+                    })
+                ],
+                inertia: false
+            });
+    },
+    
+    dragMoveListener(event) {
+        const target = event.target;
+        
+        // Obter posição atual
+        const currentLeft = parseFloat(target.style.left) || 0;
+        const currentTop = parseFloat(target.style.top) || 0;
+        
+        // Aplicar delta
+        const newLeft = currentLeft + event.dx;
+        const newTop = currentTop + event.dy;
+        
+        target.style.left = newLeft + 'px';
+        target.style.top = newTop + 'px';
+        
+        this.updatePropertiesPanel();
+    },
+    
+    resizeMoveListener(event) {
+        const target = event.target;
+        
+        // Atualizar tamanho baseado no evento
+        const newWidth = event.rect.width;
+        const newHeight = event.rect.height;
+        
+        target.style.width = newWidth + 'px';
+        target.style.height = newHeight + 'px';
+        
+        this.updatePropertiesPanel();
+    },
+    
+    setupEventListeners() {
+        // Selecionar campo
+        this.canvas.addEventListener('click', (e) => {
+            if (e.target.classList.contains('campo-canvas')) {
+                this.selectField(e.target);
+            }
+        });
+        
+        // Botões de ação
+        document.getElementById('btnSave')?.addEventListener('click', () => this.saveAllFields());
+        document.getElementById('btnApplyProperties')?.addEventListener('click', () => this.applyProperties());
+        document.getElementById('btnDeleteField')?.addEventListener('click', () => this.deleteField());
+        document.getElementById('btnZoomIn')?.addEventListener('click', () => this.zoomIn());
+        document.getElementById('btnZoomOut')?.addEventListener('click', () => this.zoomOut());
+        
+        // Background settings
+        document.getElementById('btnApplyBackground')?.addEventListener('click', () => this.applyBackground());
+        document.getElementById('btnRemoveBackground')?.addEventListener('click', () => this.removeBackground());
+        document.getElementById('backgroundImage')?.addEventListener('change', (e) => this.previewBackground(e));
+    },
+    
+    addFieldToCanvas(tipo) {
+        const campo = document.createElement('div');
+        campo.className = 'campo-canvas';
+        campo.dataset.tipo = tipo;
+        campo.dataset.id = 'new_' + Date.now();
+        campo.dataset.lado = this.currentLado; // Adicionar ao lado atual
+        
+        // Definir posição e tamanho em pixels (não mm)
+        campo.style.position = 'absolute';
+        campo.style.left = '20px';
+        campo.style.top = '20px';
+        campo.style.width = '150px';
+        campo.style.height = '30px';
+        
+        const label = document.createElement('div');
+        label.className = 'campo-label';
+        label.textContent = tipo.replace('_', ' ').toUpperCase();
+        
+        const handle = document.createElement('div');
+        handle.className = 'resize-handle';
+        
+        campo.appendChild(label);
+        campo.appendChild(handle);
+        campo.appendChild(document.createTextNode(tipo));
+        
+        this.canvas.appendChild(campo);
+        this.setupInteractions();
+        this.selectField(campo);
+        
+        // Garantir que o campo está visível no lado atual
+        campo.style.display = 'block';
+    },
+    
+    makeFieldInteractive(field) {
+        // Tornar campo clicável para seleção
+        field.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.selectField(field);
+        });
+        
+        // Interact.js já está configurado globalmente para .campo-canvas
+        // Não precisa configurar novamente
+    },
+    
+    selectField(field) {
+        document.querySelectorAll('.campo-canvas').forEach(f => f.classList.remove('selected'));
+        field.classList.add('selected');
+        this.selectedField = field;
+        this.updatePropertiesPanel();
+        document.getElementById('noSelection').style.display = 'none';
+        document.getElementById('fieldProperties').style.display = 'block';
+    },
+    
+    updatePropertiesPanel() {
+        if (!this.selectedField) return;
+        
+        const canvasRect = this.canvas.getBoundingClientRect();
+        
+        // Conversão: 1mm = largura_canvas_px / largura_canvas_mm
+        const mmToPx = canvasRect.width / parseFloat(this.canvas.dataset.largura);
+        const pxToMm = parseFloat(this.canvas.dataset.largura) / canvasRect.width;
+        
+        // Obter posição e tamanho em pixels
+        const leftPx = parseFloat(this.selectedField.style.left) || 0;
+        const topPx = parseFloat(this.selectedField.style.top) || 0;
+        const widthPx = parseFloat(this.selectedField.style.width) || 0;
+        const heightPx = parseFloat(this.selectedField.style.height) || 0;
+        
+        // Converter para mm
+        const x = leftPx / mmToPx;
+        const y = topPx / mmToPx;
+        const w = widthPx / mmToPx;
+        const h = heightPx / mmToPx;
+        
+        document.getElementById('propX').value = x.toFixed(1);
+        document.getElementById('propY').value = y.toFixed(1);
+        document.getElementById('propLargura').value = w.toFixed(1);
+        document.getElementById('propAltura').value = h.toFixed(1);
+        
+        // Preencher outros campos
+        const labelElement = this.selectedField.querySelector('.campo-label');
+        document.getElementById('propNome').value = labelElement ? labelElement.textContent : '';
+        document.getElementById('propTipo').value = this.selectedField.dataset.tipo || '';
+        document.getElementById('propFonte').value = this.selectedField.style.fontFamily.replace(/['"]/g, '') || 'Arial';
+        document.getElementById('propTamanhoFonte').value = parseInt(this.selectedField.style.fontSize) || 12;
+        document.getElementById('propCor').value = this.rgbToHex(this.selectedField.style.color) || '#000000';
+        document.getElementById('propAlinhamento').value = this.selectedField.style.textAlign || 'left';
+        document.getElementById('propNegrito').checked = this.selectedField.style.fontWeight === 'bold' || this.selectedField.style.fontWeight === '700';
+        document.getElementById('propItalico').checked = this.selectedField.style.fontStyle === 'italic';
+        
+        // Preencher campos de configuração do formulário
+        document.getElementById('propObrigatorio').checked = this.selectedField.dataset.obrigatorio === 'true';
+        document.getElementById('propPergunta').value = this.selectedField.dataset.pergunta || '';
+        document.getElementById('propPlaceholder').value = this.selectedField.dataset.placeholder || '';
+        document.getElementById('propAjuda').value = this.selectedField.dataset.ajuda || '';
+        
+        console.log('Dados do formulário no painel:', {
+            obrigatorio: this.selectedField.dataset.obrigatorio,
+            pergunta: this.selectedField.dataset.pergunta,
+            placeholder: this.selectedField.dataset.placeholder,
+            ajuda: this.selectedField.dataset.ajuda
+        });
+    },
+    
+    rgbToHex(rgb) {
+        if (!rgb || rgb.indexOf('rgb') === -1) return rgb;
+        const values = rgb.match(/\d+/g);
+        if (!values || values.length < 3) return '#000000';
+        const hex = values.slice(0, 3).map(x => {
+            const h = parseInt(x).toString(16);
+            return h.length === 1 ? '0' + h : h;
+        }).join('');
+        return '#' + hex;
+    },
+    
+    applyProperties() {
+        if (!this.selectedField) return;
+        
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const mmToPx = canvasRect.width / parseFloat(this.canvas.dataset.largura);
+        
+        // Atualizar nome do campo
+        const nome = document.getElementById('propNome').value;
+        const labelElement = this.selectedField.querySelector('.campo-label');
+        if (labelElement && nome) {
+            labelElement.textContent = nome;
+        }
+        
+        // Atualizar posição e tamanho (converter mm para px)
+        const x = parseFloat(document.getElementById('propX').value) || 0;
+        const y = parseFloat(document.getElementById('propY').value) || 0;
+        const w = parseFloat(document.getElementById('propLargura').value) || 0;
+        const h = parseFloat(document.getElementById('propAltura').value) || 0;
+        
+        this.selectedField.style.left = (x * mmToPx) + 'px';
+        this.selectedField.style.top = (y * mmToPx) + 'px';
+        this.selectedField.style.width = (w * mmToPx) + 'px';
+        this.selectedField.style.height = (h * mmToPx) + 'px';
+        
+        // Resetar transforms
+        this.selectedField.style.transform = 'none';
+        this.selectedField.setAttribute('data-x', 0);
+        this.selectedField.setAttribute('data-y', 0);
+        
+        // Atualizar estilos de texto
+        this.selectedField.style.fontFamily = document.getElementById('propFonte').value;
+        this.selectedField.style.fontSize = document.getElementById('propTamanhoFonte').value + 'pt';
+        this.selectedField.style.color = document.getElementById('propCor').value;
+        this.selectedField.style.textAlign = document.getElementById('propAlinhamento').value;
+        this.selectedField.style.fontWeight = document.getElementById('propNegrito').checked ? 'bold' : 'normal';
+        this.selectedField.style.fontStyle = document.getElementById('propItalico').checked ? 'italic' : 'normal';
+        
+        // Atualizar configurações do formulário nos data-attributes
+        this.selectedField.dataset.obrigatorio = document.getElementById('propObrigatorio').checked;
+        this.selectedField.dataset.pergunta = document.getElementById('propPergunta').value;
+        this.selectedField.dataset.placeholder = document.getElementById('propPlaceholder').value;
+        this.selectedField.dataset.ajuda = document.getElementById('propAjuda').value;
+        
+        // Atualizar conteúdo HTML baseado no tipo de campo
+        const tipo = this.selectedField.dataset.tipo;
+        let contentHTML = '';
+        
+        if (tipo === 'foto') {
+            // Ícone de foto
+            contentHTML = `
+                <span class="campo-label">${nome}</span>
+                <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; opacity: 0.3;">
+                    <i class="bi bi-camera" style="font-size: 2em;"></i>
+                </div>
+                <div class="resize-handle"></div>
+            `;
+        } else if (tipo === 'assinatura') {
+            // Ícone de assinatura
+            contentHTML = `
+                <span class="campo-label">${nome}</span>
+                <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; opacity: 0.3;">
+                    <i class="bi bi-pencil-square" style="font-size: 2em;"></i>
+                </div>
+                <div class="resize-handle"></div>
+            `;
+        } else if (tipo === 'qr_code') {
+            // Ícone de QR Code
+            contentHTML = `
+                <span class="campo-label">${nome}</span>
+                <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; opacity: 0.3;">
+                    <i class="bi bi-qr-code" style="font-size: 2em;"></i>
+                </div>
+                <div class="resize-handle"></div>
+            `;
+        } else if (tipo === 'codigo_barras') {
+            // Ícone de código de barras
+            contentHTML = `
+                <span class="campo-label">${nome}</span>
+                <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; opacity: 0.3;">
+                    <i class="bi bi-upc-scan" style="font-size: 2em;"></i>
+                </div>
+                <div class="resize-handle"></div>
+            `;
+        } else if (tipo === 'imagem_estatica') {
+            // Ícone de imagem
+            contentHTML = `
+                <span class="campo-label">${nome}</span>
+                <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; opacity: 0.3;">
+                    <i class="bi bi-image" style="font-size: 2em;"></i>
+                </div>
+                <div class="resize-handle"></div>
+            `;
+        } else {
+            // Campos de texto com placeholder opcional
+            const placeholderValue = document.getElementById('propPlaceholder').value;
+            const placeholderHTML = placeholderValue ? `<span style="opacity: 0.5; font-size: 0.8em;">${placeholderValue}</span>` : '';
+            contentHTML = `
+                <span class="campo-label">${nome}</span>
+                ${placeholderHTML}
+                <div class="resize-handle"></div>
+            `;
+        }
+        
+        this.selectedField.innerHTML = contentHTML;
+        
+        // Feedback
+        const Toast = {
+            success: (msg) => {
+                const toast = document.createElement('div');
+                toast.className = 'position-fixed top-0 end-0 p-3';
+                toast.style.zIndex = '9999';
+                toast.innerHTML = `<div class="toast show" role="alert"><div class="toast-body bg-success text-white rounded">${msg}</div></div>`;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2000);
+            }
+        };
+        Toast.success('Propriedades aplicadas!');
+    },
+    
+    // Função auxiliar para converter cor para hexadecimal
+    rgbToHex(rgb) {
+        // Se já for hex, retornar
+        if (rgb.startsWith('#')) {
+            return rgb;
+        }
+        
+        // Extrair valores RGB
+        const result = rgb.match(/\d+/g);
+        if (!result || result.length < 3) {
+            return '#000000';
+        }
+        
+        const r = parseInt(result[0]);
+        const g = parseInt(result[1]);
+        const b = parseInt(result[2]);
+        
+        return '#' + [r, g, b].map(x => {
+            const hex = x.toString(16);
+            return hex.length === 1 ? '0' + hex : hex;
+        }).join('');
+    },
+    
+    async saveAllFields() {
+        const campos = [];
+        const authToken = document.getElementById('authToken').value;
+        const csrfToken = document.getElementById('csrfToken').value;
+        const modeloId = document.getElementById('modeloId').value;
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const mmToPx = canvasRect.width / parseFloat(this.canvas.dataset.largura);
+        
+        if (!authToken) {
+            this.showError('Erro de Autenticação', 'Token de autenticação não encontrado. Por favor, faça login novamente.');
+            return;
+        }
+        
+        document.querySelectorAll('.campo-canvas').forEach(campo => {
+            // Obter valores em pixels
+            const leftPx = parseFloat(campo.style.left) || 0;
+            const topPx = parseFloat(campo.style.top) || 0;
+            const widthPx = parseFloat(campo.style.width) || 50;
+            const heightPx = parseFloat(campo.style.height) || 10;
+            
+            // Converter para mm
+            const xMm = leftPx / mmToPx;
+            const yMm = topPx / mmToPx;
+            const wMm = Math.max(1, widthPx / mmToPx); // Mínimo 1mm
+            const hMm = Math.max(1, heightPx / mmToPx); // Mínimo 1mm
+            
+            const labelElement = campo.querySelector('.campo-label');
+            const nomeCampo = labelElement ? labelElement.textContent : campo.dataset.tipo;
+            
+            // Converter cor para hexadecimal
+            const corTexto = this.rgbToHex(campo.style.color || '#000000');
+            
+            const campoData = {
+                modelo: modeloId,
+                nome_campo: nomeCampo,
+                tipo: campo.dataset.tipo,
+                lado: campo.dataset.lado || 'frente',
+                posicao_x: parseFloat(xMm.toFixed(2)),
+                posicao_y: parseFloat(yMm.toFixed(2)),
+                largura: parseFloat(wMm.toFixed(2)),
+                altura: parseFloat(hMm.toFixed(2)),
+                fonte: campo.style.fontFamily.replace(/['"]/g, '') || 'Arial',
+                tamanho_fonte: parseInt(campo.style.fontSize) || 12,
+                cor_texto: corTexto,
+                alinhamento: campo.style.textAlign || 'left',
+                negrito: campo.style.fontWeight === 'bold' || campo.style.fontWeight === '700',
+                italico: campo.style.fontStyle === 'italic',
+                sublinhado: campo.style.textDecoration === 'underline',
+                rotacao: 0,
+                obrigatorio: campo.dataset.obrigatorio === 'true',
+                pergunta_formulario: campo.dataset.pergunta || `Digite ${nomeCampo}`,
+                placeholder: campo.dataset.placeholder || '',
+                texto_ajuda: campo.dataset.ajuda || '',
+                ordem: 0
+            };
+            
+            console.log(`Dados do formulário para salvar ${nomeCampo}:`, {
+                obrigatorio: campoData.obrigatorio,
+                pergunta_formulario: campoData.pergunta_formulario,
+                placeholder: campoData.placeholder,
+                texto_ajuda: campoData.texto_ajuda,
+                from_dataset: {
+                    obrigatorio: campo.dataset.obrigatorio,
+                    pergunta: campo.dataset.pergunta,
+                    placeholder: campo.dataset.placeholder,
+                    ajuda: campo.dataset.ajuda
+                }
+            });
+            
+            // Incluir ID se já existe no banco
+            if (campo.dataset.id && !campo.dataset.id.startsWith('new_')) {
+                campoData.id = campo.dataset.id;
+            }
+            
+            campos.push(campoData);
+        });
+        
+        console.log('Salvando campos:', campos);
+        
+        try {
+            let salvos = 0;
+            let erros = 0;
+            
+            for (const campo of campos) {
+                const isNew = !campo.id;
+                const url = isNew 
+                    ? '/api/v1/campos-cartao/'
+                    : `/api/v1/campos-cartao/${campo.id}/`;
+                
+                const method = isNew ? 'POST' : 'PATCH';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`,
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify(campo)
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    salvos++;
+                    
+                    // Atualizar ID do campo se for novo
+                    if (isNew) {
+                        const campoElement = Array.from(document.querySelectorAll('.campo-canvas'))
+                            .find(el => {
+                                const label = el.querySelector('.campo-label');
+                                return label && label.textContent === campo.nome_campo && 
+                                       el.dataset.tipo === campo.tipo;
+                            });
+                        if (campoElement) {
+                            campoElement.dataset.id = data.id;
+                        }
+                    }
+                    
+                    console.log(`✅ Campo "${campo.nome_campo}" salvo com sucesso`);
+                } else {
+                    const errorText = await response.text();
+                    console.error(`❌ Erro ao salvar campo "${campo.nome_campo}":`, errorText);
+                    erros++;
+                }
+            }
+            
+            if (erros === 0) {
+                this.showSuccess('Sucesso', `${salvos} campo(s) salvos com sucesso!`);
+            } else {
+                this.showError('Atenção', `Parcialmente salvo: ${salvos} campo(s) com sucesso, ${erros} erro(s). Verifique o console para detalhes.`);
+            }
+            
+        } catch (error) {
+            console.error('Erro ao salvar campos:', error);
+            this.showError('Erro', 'Erro ao salvar campos. Verifique o console para detalhes.');
+        }
+    },
+    
+    async deleteField(fieldElement) {
+        // Se foi chamado via onclick do botão, usar o elemento passado
+        // Senão, usar o campo selecionado
+        const field = fieldElement || this.selectedField;
+        
+        if (!field) return;
+        
+        const fieldId = field.dataset.id;
+        const labelElement = field.querySelector('.campo-label');
+        const nomeCampo = labelElement ? labelElement.textContent : 'Campo';
+        
+        // Usar modal de confirmação
+        this.showConfirm(
+            'Confirmar exclusão',
+            `Deseja realmente excluir o campo "${nomeCampo}"?`,
+            async () => {
+                // Se é um campo novo (ainda não salvo no banco), apenas remove do DOM
+                if (!fieldId || fieldId.startsWith('new_')) {
+                    field.remove();
+                    if (this.selectedField === field) {
+                        this.selectedField = null;
+                        document.getElementById('noSelection').style.display = 'block';
+                        document.getElementById('fieldProperties').style.display = 'none';
+                    }
+                    return;
+                }
+                
+                // Campo existente no banco - deletar via API
+                const authToken = document.getElementById('authToken').value;
+                const csrfToken = document.getElementById('csrfToken').value;
+                
+                if (!authToken) {
+                    this.showError('Erro', 'Token de autenticação não encontrado.');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/v1/campos-cartao/${fieldId}/`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`,
+                            'X-CSRFToken': csrfToken
+                        }
+                    });
+                    
+                    if (response.ok || response.status === 204) {
+                        console.log(`✅ Campo "${nomeCampo}" deletado com sucesso`);
+                        field.remove();
+                        if (this.selectedField === field) {
+                            this.selectedField = null;
+                            document.getElementById('noSelection').style.display = 'block';
+                            document.getElementById('fieldProperties').style.display = 'none';
+                        }
+                        this.showSuccess('Sucesso', `Campo "${nomeCampo}" excluído com sucesso!`);
+                    } else if (response.status === 404) {
+                        console.warn(`Campo "${nomeCampo}" já foi deletado`);
+                        field.remove();
+                        if (this.selectedField === field) {
+                            this.selectedField = null;
+                            document.getElementById('noSelection').style.display = 'block';
+                            document.getElementById('fieldProperties').style.display = 'none';
+                        }
+                    } else {
+                        const errorText = await response.text();
+                        console.error('Erro ao deletar campo:', errorText);
+                        this.showError('Erro', 'Erro ao deletar campo. Verifique o console.');
+                    }
+                } catch (error) {
+                    console.error('Erro ao deletar campo:', error);
+                    this.showError('Erro', 'Erro ao deletar campo. Verifique o console.');
+                }
+            }
+        );
+    },
+    
+    zoomIn() {
+        this.zoom = Math.min(this.zoom + 0.1, 2);
+        this.canvas.style.transform = `scale(${this.zoom})`;
+        document.getElementById('zoomLevel').textContent = Math.round(this.zoom * 100) + '%';
+    },
+    
+    zoomOut() {
+        this.zoom = Math.max(this.zoom - 0.1, 0.5);
+        this.canvas.style.transform = `scale(${this.zoom})`;
+        document.getElementById('zoomLevel').textContent = Math.round(this.zoom * 100) + '%';
+    },
+    
+    async loadExistingFields() {
+        const authToken = document.getElementById('authToken').value;
+        const modeloId = document.getElementById('modeloId').value;
+        
+        console.log('loadExistingFields iniciado', { authToken: authToken ? 'presente' : 'ausente', modeloId });
+        
+        if (!authToken || !modeloId) {
+            console.warn('Token ou modeloId ausente');
+            return;
+        }
+        
+        try {
+            const url = `/api/v1/campos-cartao/?modelo=${modeloId}`;
+            console.log('Buscando campos em:', url);
+            
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+            
+            console.log('Response status:', response.status);
+            
+            if (!response.ok) {
+                console.error('Erro ao carregar campos:', response.status);
+                return;
+            }
+            
+            const data = await response.json();
+            console.log('Campos carregados da API:', data);
+            
+            // A API retorna um objeto paginado {count, results}
+            const campos = data.results || data;
+            console.log('Quantidade de campos:', campos.length);
+            
+            const canvasRect = this.canvas.getBoundingClientRect();
+            const mmToPx = canvasRect.width / parseFloat(this.canvas.dataset.largura);
+            
+            // Criar elemento para cada campo
+            campos.forEach(campo => {
+                const fieldElement = document.createElement('div');
+                fieldElement.className = 'campo-canvas';
+                fieldElement.dataset.tipo = campo.tipo;
+                fieldElement.dataset.lado = campo.lado;
+                fieldElement.dataset.id = campo.id; // ID do banco de dados
+                
+                // Armazenar dados do formulário nos data-attributes
+                fieldElement.dataset.obrigatorio = campo.obrigatorio || false;
+                fieldElement.dataset.pergunta = campo.pergunta_formulario || '';
+                fieldElement.dataset.placeholder = campo.placeholder || '';
+                fieldElement.dataset.ajuda = campo.texto_ajuda || '';
+                
+                console.log(`Dados do formulário carregados para ${campo.nome_campo}:`, {
+                    obrigatorio: campo.obrigatorio,
+                    pergunta: campo.pergunta_formulario,
+                    placeholder: campo.placeholder,
+                    texto_ajuda: campo.texto_ajuda
+                });
+                
+                // Converter posições de mm para px
+                const leftPx = campo.posicao_x * mmToPx;
+                const topPx = campo.posicao_y * mmToPx;
+                const widthPx = campo.largura * mmToPx;
+                const heightPx = campo.altura * mmToPx;
+                
+                // Aplicar estilos
+                fieldElement.style.position = 'absolute';
+                fieldElement.style.left = leftPx + 'px';
+                fieldElement.style.top = topPx + 'px';
+                fieldElement.style.width = widthPx + 'px';
+                fieldElement.style.height = heightPx + 'px';
+                fieldElement.style.fontFamily = campo.fonte;
+                fieldElement.style.fontSize = campo.tamanho_fonte + 'px';
+                fieldElement.style.color = campo.cor_texto;
+                fieldElement.style.textAlign = campo.alinhamento;
+                fieldElement.style.fontWeight = campo.negrito ? 'bold' : 'normal';
+                fieldElement.style.fontStyle = campo.italico ? 'italic' : 'normal';
+                fieldElement.style.textDecoration = campo.sublinhado ? 'underline' : 'none';
+                
+                // Mostrar apenas campos do lado atual
+                fieldElement.style.display = campo.lado === this.currentLado ? 'flex' : 'none';
+                
+                console.log(`Campo criado: ${campo.nome_campo}`, {
+                    lado: campo.lado,
+                    currentLado: this.currentLado,
+                    display: fieldElement.style.display,
+                    left: fieldElement.style.left,
+                    top: fieldElement.style.top,
+                    width: fieldElement.style.width,
+                    height: fieldElement.style.height
+                });
+                
+                // Criar conteúdo do campo baseado no tipo
+                let contentHTML = '';
+                
+                if (campo.tipo === 'foto') {
+                    // Ícone de foto
+                    contentHTML = `
+                        <span class="campo-label">${campo.nome_campo}</span>
+                        <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; opacity: 0.3;">
+                            <i class="bi bi-camera" style="font-size: 2em;"></i>
+                        </div>
+                        <div class="resize-handle"></div>
+                    `;
+                } else if (campo.tipo === 'assinatura') {
+                    // Ícone de assinatura
+                    contentHTML = `
+                        <span class="campo-label">${campo.nome_campo}</span>
+                        <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; opacity: 0.3;">
+                            <i class="bi bi-pencil-square" style="font-size: 2em;"></i>
+                        </div>
+                        <div class="resize-handle"></div>
+                    `;
+                } else if (campo.tipo === 'qr_code') {
+                    // Ícone de QR Code
+                    contentHTML = `
+                        <span class="campo-label">${campo.nome_campo}</span>
+                        <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; opacity: 0.3;">
+                            <i class="bi bi-qr-code" style="font-size: 2em;"></i>
+                        </div>
+                        <div class="resize-handle"></div>
+                    `;
+                } else if (campo.tipo === 'codigo_barras') {
+                    // Ícone de código de barras
+                    contentHTML = `
+                        <span class="campo-label">${campo.nome_campo}</span>
+                        <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; opacity: 0.3;">
+                            <i class="bi bi-upc-scan" style="font-size: 2em;"></i>
+                        </div>
+                        <div class="resize-handle"></div>
+                    `;
+                } else if (campo.tipo === 'imagem_estatica') {
+                    // Ícone de imagem
+                    contentHTML = `
+                        <span class="campo-label">${campo.nome_campo}</span>
+                        <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; opacity: 0.3;">
+                            <i class="bi bi-image" style="font-size: 2em;"></i>
+                        </div>
+                        <div class="resize-handle"></div>
+                    `;
+                } else {
+                    // Campos de texto com placeholder opcional
+                    const placeholder = campo.placeholder ? `<span style="opacity: 0.5; font-size: 0.8em;">${campo.placeholder}</span>` : '';
+                    contentHTML = `
+                        <span class="campo-label">${campo.nome_campo}</span>
+                        ${placeholder}
+                        <div class="resize-handle"></div>
+                    `;
+                }
+                
+                fieldElement.innerHTML = contentHTML;
+                
+                this.canvas.appendChild(fieldElement);
+                console.log('Campo adicionado ao canvas, total de filhos:', this.canvas.children.length);
+                this.makeFieldInteractive(fieldElement);
+            });
+            
+            console.log(`${campos.length} campos carregados no canvas`);
+        } catch (error) {
+            console.error('Erro ao carregar campos:', error);
+        }
+    },
+    
+    toggleLado(lado) {
+        // Alternar entre frente e verso
+        this.currentLado = lado;
+        
+        // Atualizar botões
+        const btnFrente = document.getElementById('btnFrente');
+        const btnVerso = document.getElementById('btnVerso');
+        
+        if (lado === 'frente') {
+            btnFrente.classList.add('btn-primary');
+            btnFrente.classList.remove('btn-outline-primary');
+            btnVerso.classList.remove('btn-primary');
+            btnVerso.classList.add('btn-outline-primary');
+        } else {
+            btnVerso.classList.add('btn-primary');
+            btnVerso.classList.remove('btn-outline-primary');
+            btnFrente.classList.remove('btn-primary');
+            btnFrente.classList.add('btn-outline-primary');
+        }
+        
+        // Mostrar/ocultar campos baseado no lado
+        document.querySelectorAll('.campo-canvas').forEach(campo => {
+            if (campo.dataset.lado === lado) {
+                campo.style.display = 'flex';
+            } else {
+                campo.style.display = 'none';
+            }
+        });
+        
+        // Aplicar background do lado correto
+        this.applyCurrentBackground();
+    },
+    
+    applyCurrentBackground() {
+        // Aplicar background baseado no lado atual (frente ou verso)
+        const bg = this.backgrounds[this.currentLado];
+        
+        // Sempre limpar o background primeiro para evitar sobreposição
+        this.canvas.style.backgroundImage = 'none';
+        this.canvas.style.backgroundColor = '#FFFFFF';
+        
+        // Aplicar cor
+        if (bg.color) {
+            this.canvas.style.backgroundColor = bg.color;
+        }
+        
+        // Aplicar imagem (somente se existir para o lado atual)
+        if (bg.image) {
+            this.canvas.style.backgroundImage = `url(${bg.image})`;
+            this.canvas.style.backgroundSize = 'cover';
+            this.canvas.style.backgroundPosition = 'center';
+            this.canvas.style.backgroundRepeat = 'no-repeat';
+        }
+        
+        console.log(`🎨 Background aplicado para ${this.currentLado}:`, {
+            cor: bg.color,
+            imagem: bg.image ? 'Sim' : 'Não'
+        });
+    },
+    
+    async applyBackground() {
+        const color = document.getElementById('backgroundColor').value;
+        const imageInput = document.getElementById('backgroundImage');
+        const authToken = document.getElementById('authToken').value;
+        const csrfToken = document.getElementById('csrfToken').value;
+        const modeloId = document.getElementById('modeloId').value;
+        
+        if (!authToken) {
+            alert('❌ Erro: Token de autenticação não encontrado.');
+            return;
+        }
+        
+        // Atualizar background local
+        this.backgrounds[this.currentLado].color = color;
+        
+        // Preparar FormData para upload
+        const formData = new FormData();
+        
+        // Determinar qual campo atualizar baseado no lado atual
+        const colorField = this.currentLado === 'frente' ? 'background_color' : 'background_color_verso';
+        const imageField = this.currentLado === 'frente' ? 'background_image' : 'background_image_verso';
+        
+        formData.append(colorField, color);
+        
+        // Se há imagem, adicionar ao FormData
+        if (imageInput.files && imageInput.files[0]) {
+            formData.append(imageField, imageInput.files[0]);
+            
+            // Preview local
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.backgrounds[this.currentLado].image = e.target.result;
+                this.applyCurrentBackground();
+            };
+            reader.readAsDataURL(imageInput.files[0]);
+        } else {
+            this.applyCurrentBackground();
+        }
+        
+        // Salvar no banco via API
+        try {
+            const response = await fetch(`/api/v1/modelos-cartao/${modeloId}/`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'X-CSRFToken': csrfToken
+                },
+                body: formData
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✅ Fundo salvo com sucesso:', data);
+                
+                // Atualizar background salvo
+                if (this.currentLado === 'frente') {
+                    this.backgrounds.frente.color = data.background_color;
+                    if (data.background_image) {
+                        this.backgrounds.frente.image = data.background_image;
+                    }
+                } else {
+                    this.backgrounds.verso.color = data.background_color_verso;
+                    if (data.background_image_verso) {
+                        this.backgrounds.verso.image = data.background_image_verso;
+                    }
+                }
+                
+                // Fechar modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('backgroundModal'));
+                modal?.hide();
+                // Corrige bug do backdrop bloqueando tela
+                document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+
+                const ladoTexto = this.currentLado === 'frente' ? 'Frente' : 'Verso';
+                this.showSuccess('Fundo Salvo!', `O fundo do lado ${ladoTexto.toLowerCase()} foi salvo com sucesso.`);
+            } else {
+                const errorText = await response.text();
+                console.error('Erro ao salvar fundo:', errorText);
+                this.showError('Erro ao Salvar Fundo', 'Não foi possível salvar o fundo. Verifique o console.');
+            }
+        } catch (error) {
+            console.error('Erro ao salvar fundo:', error);
+            this.showError('Erro ao Salvar Fundo', 'Ocorreu um erro ao salvar o fundo.');
+        }
+    },
+    
+    async removeBackground() {
+        const authToken = document.getElementById('authToken').value;
+        const csrfToken = document.getElementById('csrfToken').value;
+        const modeloId = document.getElementById('modeloId').value;
+        
+        if (!authToken) {
+            this.showError('Erro de Autenticação', 'Token de autenticação não encontrado.');
+            return;
+        }
+        
+        const ladoTexto = this.currentLado === 'frente' ? 'frente' : 'verso';
+        
+        this.showConfirm(
+            'Remover Fundo',
+            `Deseja realmente remover a imagem de fundo do lado ${ladoTexto}?`,
+            async () => {
+                // Determinar qual campo limpar
+                const imageField = this.currentLado === 'frente' ? 'background_image' : 'background_image_verso';
+        
+        try {
+            const response = await fetch(`/api/v1/modelos-cartao/${modeloId}/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    [imageField]: null
+                })
+            });
+            
+                
+                if (response.ok) {
+                    this.backgrounds[this.currentLado].image = null;
+                    this.applyCurrentBackground();
+                    const ladoTexto = this.currentLado === 'frente' ? 'Frente' : 'Verso';
+                    this.showSuccess('Fundo Removido!', `A imagem de fundo do lado ${ladoTexto.toLowerCase()} foi removida com sucesso.`);
+                } else {
+                    const errorText = await response.text();
+                    console.error('Erro ao remover fundo:', errorText);
+                    this.showError('Erro ao Remover Fundo', 'Não foi possível remover o fundo.');
+                }
+            } catch (error) {
+                console.error('Erro ao remover fundo:', error);
+                this.showError('Erro ao Remover Fundo', 'Ocorreu um erro ao remover o fundo.');
+            }
+        });
+    },    previewBackground(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                // Mostrar preview no modal
+                console.log('Preview da imagem carregado');
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+};
+
+// Inicializar quando DOM estiver pronto
+document.addEventListener('DOMContentLoaded', () => {
+    canvasEditor.init();
+    
+    // Atualizar modal de background ao abrir
+    const backgroundModal = document.getElementById('backgroundModal');
+    backgroundModal.addEventListener('show.bs.modal', () => {
+        const ladoTexto = canvasEditor.currentLado === 'frente' ? 'Frente' : 'Verso';
+        document.getElementById('ladoAtual').textContent = ladoTexto;
+        document.getElementById('ladoAtualTexto').textContent = ladoTexto.toLowerCase();
+        
+        // Preencher cor atual
+        const currentColor = canvasEditor.backgrounds[canvasEditor.currentLado].color;
+        document.getElementById('backgroundColor').value = currentColor || '#FFFFFF';
+    });
+    
+    // Aplicar background ao clicar
+    document.getElementById('btnApplyBackground').addEventListener('click', () => {
+        canvasEditor.applyBackground();
+    });
+    
+    // Remover imagem de fundo ao clicar
+    document.getElementById('btnRemoveBackgroundImage').addEventListener('click', () => {
+        canvasEditor.removeBackground();
+    });
+});
+</script>
+{% endblock %}

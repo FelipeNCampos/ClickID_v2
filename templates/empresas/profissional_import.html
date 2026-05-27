@@ -1,0 +1,420 @@
+{% extends 'base.html' %}
+
+{% block title %}Importar Cartoes - ClickID{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-file-earmark-excel"></i> Importar Cartoes via Excel</h2>
+        <p class="text-muted mb-0">Cadastre multiplos cartoes de uma vez</p>
+    </div>
+    <a href="{{ back_url }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Upload do Arquivo</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data" id="importForm">
+                    {% csrf_token %}
+
+                    <input type="hidden" name="empresa" value="{{ empresa_hidden_id }}" />
+
+                    <div class="mb-3">
+                        <label for="arquivo" class="form-label">Arquivo Excel *</label>
+                        <input
+                            type="file"
+                            class="form-control"
+                            id="arquivo"
+                            name="arquivo"
+                            accept=".xlsx,.xls"
+                            required
+                        >
+                        <div class="form-text">
+                            Formatos aceitos: .xlsx ou .xls (maximo 5MB)
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Importante:</strong> Certifique-se de que a coluna CPF esta formatada como <strong>Texto</strong> no Excel para preservar zeros a esquerda.
+                    </div>
+
+                    <div id="progressContainer" class="mb-3" style="display: none;">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Importando cartoes...</span>
+                            <span class="text-muted" id="progressText">0%</span>
+                        </div>
+                        <div class="progress" style="height: 25px;">
+                            <div
+                                id="progressBar"
+                                class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                                role="progressbar"
+                                style="width: 0%;"
+                                aria-valuenow="0"
+                                aria-valuemin="0"
+                                aria-valuemax="100">
+                                <strong id="progressCount">0/0</strong>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-2" id="progressStatus">Iniciando importacao...</small>
+                    </div>
+
+                    <div id="resultContainer" style="display: none;">
+                        <div class="alert alert-success">
+                            <h5 class="alert-heading"><i class="bi bi-check-circle"></i> Importacao Concluida!</h5>
+                            <hr>
+                            <div class="row text-center">
+                                <div class="col-md-4">
+                                    <h3 class="text-success mb-0" id="totalImportados">0</h3>
+                                    <small class="text-muted">Importados</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <h3 class="text-warning mb-0" id="totalIgnorados">0</h3>
+                                    <small class="text-muted">Ignorados</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <h3 class="text-danger mb-0" id="totalErros">0</h3>
+                                    <small class="text-muted">Erros</small>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <a href="{{ success_url }}" class="btn btn-success">
+                                    <i class="bi bi-people"></i> Ver Cartoes
+                                </a>
+                                <button type="button" class="btn btn-outline-secondary" onclick="location.reload()">
+                                    <i class="bi bi-arrow-clockwise"></i> Nova Importacao
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="errorsList" style="display: none;">
+                            <div class="alert alert-danger">
+                                <h6><i class="bi bi-exclamation-triangle"></i> Erros Encontrados:</h6>
+                                <ul id="errorsContent" class="mb-0 small"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between" id="formButtons">
+                        <a href="{{ back_url }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-success" id="btnSubmit">
+                            <i class="bi bi-upload"></i> Importar Cartoes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="bi bi-info-circle"></i> Formato do Arquivo</h6>
+            </div>
+            <div class="card-body">
+                <p class="small mb-2"><strong>O arquivo Excel deve ter as seguintes colunas (na ordem):</strong></p>
+                <table class="table table-sm table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Coluna</th>
+                            <th>Obrigatoria</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Nome</td>
+                            <td><span class="badge bg-danger">Sim</span></td>
+                        </tr>
+                        <tr>
+                            <td>CPF</td>
+                            <td><span class="badge bg-danger">Sim</span></td>
+                        </tr>
+                        <tr>
+                            <td>Email</td>
+                            <td><span class="badge bg-secondary">Nao</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="small text-muted mb-2">
+                    <i class="bi bi-exclamation-circle"></i> A primeira linha deve conter os cabecalhos
+                </p>
+                <p class="small text-warning mb-0">
+                    <i class="bi bi-lightbulb"></i> <strong>Dica:</strong> Use "-" para e-mails vazios
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-warning text-white">
+                <h6 class="mb-0"><i class="bi bi-download"></i> Modelo Excel</h6>
+            </div>
+            <div class="card-body">
+                <p class="small mb-3">Baixe o modelo Excel para facilitar a importacao:</p>
+                <a href="#" class="btn btn-warning w-100" id="downloadModelo">
+                    <i class="bi bi-file-earmark-excel"></i> Baixar Modelo
+                </a>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0"><i class="bi bi-list-check"></i> O que acontece?</h6>
+            </div>
+            <div class="card-body">
+                <ul class="small mb-0">
+                    <li>Todos os cartoes serao cadastrados automaticamente</li>
+                    <li>E-mails serao gerados se nao informados</li>
+                    <li>Senhas temporarias serao criadas</li>
+                    <li>CPFs duplicados serao ignorados</li>
+                    <li>Voce recebera um relatorio apos a importacao</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script>
+document.getElementById('downloadModelo').addEventListener('click', function(e) {
+    e.preventDefault();
+
+    const wb = XLSX.utils.book_new();
+    const data = [
+        ['Nome', 'CPF', 'Email'],
+        ['Joao Silva', '01234567890', 'joao@exemplo.com'],
+        ['Maria Santos', '09876543210', 'maria@exemplo.com'],
+        ['Pedro Oliveira', '01112233344', '-']
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let row = 1; row <= range.e.r; row++) {
+        const cellAddress = XLSX.utils.encode_cell({r: row, c: 1});
+        if (ws[cellAddress]) {
+            ws[cellAddress].t = 's';
+            ws[cellAddress].z = '@';
+        }
+    }
+
+    ws['!cols'] = [{wch: 25}, {wch: 15}, {wch: 30}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Profissionais');
+    XLSX.writeFile(wb, 'modelo_profissionais.xlsx');
+});
+
+async function importFormHandler(e) {
+    e.preventDefault();
+
+    const fileInput = document.getElementById('arquivo');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert('Selecione um arquivo para importar');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function(loadEvent) {
+        const data = new Uint8Array(loadEvent.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+        const totalRows = Math.max(jsonData.length - 1, 0);
+
+        document.getElementById('progressContainer').style.display = 'block';
+        document.getElementById('formButtons').style.display = 'none';
+        document.getElementById('btnSubmit').disabled = true;
+
+        const formData = new FormData();
+        formData.append('arquivo', file);
+        formData.append('empresa', '{{ empresa_hidden_id }}');
+
+        try {
+            const csrfTokenField = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            const csrfToken = csrfTokenField ? csrfTokenField.value : '';
+
+            const response = await fetch('{{ import_post_url }}', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken,
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin',
+                body: formData
+            });
+
+            const contentType = response.headers.get('content-type') || '';
+
+            if (response.ok) {
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 5;
+                    if (progress <= 95) {
+                        updateProgress(progress, progress * totalRows / 100, totalRows);
+                    }
+                }, 100);
+
+                if (contentType.includes('application/json')) {
+                    const result = await response.json();
+                    clearInterval(interval);
+                    updateProgress(100, totalRows, totalRows);
+                    setTimeout(() => { showResult(result); }, 500);
+                } else {
+                    const text = await response.text();
+                    clearInterval(interval);
+                    updateProgress(100, totalRows, totalRows);
+                    showHtmlErrorResponse(text);
+                }
+            } else {
+                let errorObj = null;
+                let text = null;
+
+                if (contentType.includes('application/json')) {
+                    try {
+                        errorObj = await response.json();
+                    } catch (jsonError) {
+                        errorObj = { erro: 'Resposta JSON invalida' };
+                    }
+                } else {
+                    text = await response.text();
+                }
+
+                const arquivoErro = (errorObj && errorObj.erro && errorObj.erro.toString().toLowerCase().includes('arquivo nao fornecido'))
+                    || (text && text.toLowerCase().includes('arquivo nao fornecido'));
+
+                if (arquivoErro) {
+                    if (confirm('Upload via AJAX falhou (arquivo nao enviado). Deseja tentar enviar o formulario de forma tradicional?')) {
+                        document.getElementById('importForm').removeEventListener('submit', importFormHandler);
+                        document.getElementById('importForm').submit();
+                        return;
+                    }
+                    location.reload();
+                    return;
+                }
+
+                if (errorObj) {
+                    alert('Erro na importacao: ' + JSON.stringify(errorObj));
+                } else if (text) {
+                    showHtmlErrorResponse(text);
+                    return;
+                } else {
+                    alert('Erro desconhecido na importacao');
+                }
+
+                location.reload();
+            }
+        } catch (error) {
+            alert('Erro de rede ou JS: ' + error.message);
+            location.reload();
+        }
+    };
+
+    reader.readAsArrayBuffer(file);
+}
+
+document.getElementById('importForm').addEventListener('submit', importFormHandler);
+
+function updateProgress(percent, current, total) {
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const progressCount = document.getElementById('progressCount');
+    const progressStatus = document.getElementById('progressStatus');
+
+    progressBar.style.width = percent + '%';
+    progressBar.setAttribute('aria-valuenow', percent);
+    progressText.textContent = Math.round(percent) + '%';
+    progressCount.textContent = Math.round(current) + '/' + total;
+
+    if (percent < 30) {
+        progressStatus.textContent = 'Lendo arquivo Excel...';
+    } else if (percent < 60) {
+        progressStatus.textContent = 'Validando dados...';
+    } else if (percent < 90) {
+        progressStatus.textContent = 'Criando profissionais...';
+    } else {
+        progressStatus.textContent = 'Finalizando importacao...';
+    }
+}
+
+function showResult(result) {
+    document.getElementById('progressContainer').style.display = 'none';
+    document.getElementById('resultContainer').style.display = 'block';
+
+    document.getElementById('totalImportados').textContent = result.total_importados || 0;
+    document.getElementById('totalIgnorados').textContent = result.total_ignorados || 0;
+    document.getElementById('totalErros').textContent = result.total_erros || 0;
+
+    if (result.total_erros > 0 && result.erros) {
+        const errorsList = document.getElementById('errorsList');
+        const errorsContent = document.getElementById('errorsContent');
+
+        errorsContent.innerHTML = '';
+        result.erros.slice(0, 10).forEach(erro => {
+            const li = document.createElement('li');
+            li.textContent = `Linha ${erro.linha}: ${erro.erro}`;
+            errorsContent.appendChild(li);
+        });
+
+        if (result.total_erros > 10) {
+            const li = document.createElement('li');
+            li.textContent = `... e mais ${result.total_erros - 10} erro(s)`;
+            li.className = 'text-muted';
+            errorsContent.appendChild(li);
+        }
+
+        errorsList.style.display = 'block';
+    }
+}
+
+function showHtmlErrorResponse(html) {
+    alert('Erro na importacao (resposta HTML):\n' + extractTextPreview(html));
+
+    const debugWindow = window.open('', '_blank');
+    if (debugWindow && debugWindow.document) {
+        debugWindow.document.open();
+        debugWindow.document.write(html);
+        debugWindow.document.close();
+        return;
+    }
+
+    const existingDetails = document.getElementById('htmlErrorDetails');
+    if (existingDetails) {
+        existingDetails.remove();
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.id = 'htmlErrorDetails';
+    wrapper.className = 'alert alert-danger mt-3';
+    wrapper.innerHTML = `
+        <h6><i class="bi bi-bug"></i> Resposta HTML recebida</h6>
+        <p class="mb-2">O navegador bloqueou a abertura automatica da nova aba.</p>
+        <details>
+            <summary>Mostrar detalhes da resposta</summary>
+            <pre class="small mt-2 mb-0" style="white-space: pre-wrap; max-height: 320px; overflow: auto;"></pre>
+        </details>
+    `;
+
+    wrapper.querySelector('pre').textContent = html;
+    document.getElementById('resultContainer').style.display = 'block';
+    document.getElementById('resultContainer').prepend(wrapper);
+}
+
+function extractTextPreview(html) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const text = (doc.body && doc.body.textContent ? doc.body.textContent : html)
+        .replace(/\s+/g, ' ')
+        .trim();
+    return text.substring(0, 2000);
+}
+</script>
+
+{% endblock %}

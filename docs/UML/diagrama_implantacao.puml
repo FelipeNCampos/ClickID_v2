@@ -1,0 +1,219 @@
+@startuml ClickID - Diagrama de Implantação
+
+title Arquitetura de Implantação - Sistema ClickID
+
+' ==================== ZONA DE USUÁRIOS ====================
+node "Cliente Web" as client {
+    [Navegador] as browser
+    component "React SPA" as react_app
+}
+
+node "Dispositivo Móvel" as mobile {
+    [Mobile Browser] as mobile_browser
+    component "PWA" as pwa
+}
+
+' ==================== ZONA DMZ (CDN) ====================
+cloud "CDN (CloudFront)" as cdn {
+    artifact "Assets Estáticos" as static_assets
+    artifact "Imagens Otimizadas" as opt_images
+}
+
+' ==================== LOAD BALANCER ====================
+node "Load Balancer" as lb {
+    component "NGINX" as nginx
+    note right of nginx
+        - SSL/TLS Termination
+        - Rate Limiting
+        - Health Checks
+        - Sticky Sessions
+    end note
+}
+
+' ==================== CAMADA DE APLICAÇÃO ====================
+node "App Server 1" as app1 <<Docker Container>> {
+    component "Django API" as django1
+    component "Gunicorn" as gunicorn1
+    artifact "Python 3.11" as python1
+}
+
+node "App Server 2" as app2 <<Docker Container>> {
+    component "Django API" as django2
+    component "Gunicorn" as gunicorn2
+    artifact "Python 3.11" as python2
+}
+
+node "App Server N" as appN <<Docker Container>> {
+    component "Django API" as djangoN
+    component "Gunicorn" as gunicornN
+    artifact "Python 3.11" as pythonN
+}
+
+' ==================== WORKERS ====================
+node "Worker Server" as worker <<Docker Container>> {
+    component "Celery Workers" as celery
+    component "Beat Scheduler" as beat
+    note right of celery
+        - Email Sending
+        - File Processing
+        - Report Generation
+        - Image Optimization
+    end note
+}
+
+' ==================== BANCO DE DADOS ====================
+database "PostgreSQL Primary" as pg_primary {
+    storage "Dados Principais" as main_data
+    note right of pg_primary
+        - Multi-tenancy
+        - Auto-vacuum
+        - Connection Pooling
+        - Backup contínuo
+    end note
+}
+
+database "PostgreSQL Replica" as pg_replica {
+    storage "Read Replica" as replica_data
+    note right of pg_replica
+        - Somente leitura
+        - Sync assíncrono
+        - Queries pesadas
+    end note
+}
+
+' ==================== CACHE ====================
+database "Redis Cluster" as redis_cluster {
+    storage "Cache de Sessões" as session_cache
+    storage "Cache de Métricas" as metrics_cache
+}
+
+' ==================== MESSAGE QUEUE ====================
+node "Message Broker" as broker {
+    component "RabbitMQ" as rabbitmq
+    queue "Email Queue" as email_q
+    queue "Export Queue" as export_q
+}
+
+' ==================== STORAGE ====================
+cloud "Amazon S3" as s3 {
+    storage "Bucket: fotos-profissionais" as s3_photos
+    storage "Bucket: assinaturas" as s3_signatures
+    storage "Bucket: exports-temp" as s3_exports
+    note right of s3
+        - Lifecycle policies
+        - Versionamento
+        - Encryption at rest
+        - Cross-region replication
+    end note
+}
+
+' ==================== EMAIL SERVICE ====================
+cloud "Email Service (SES)" as ses {
+    component "AWS SES" as aws_ses
+    artifact "Templates" as email_templates
+}
+
+' ==================== MONITORING ====================
+cloud "Monitoring & Logging" as monitoring {
+    component "CloudWatch" as cloudwatch
+    component "Sentry" as sentry
+    storage "Logs Centralizados" as logs
+}
+
+' ==================== BACKUP ====================
+cloud "Backup Storage" as backup {
+    storage "DB Backups (S3)" as db_backups
+    storage "Snapshots" as snapshots
+}
+
+' ==================== RELACIONAMENTOS ====================
+
+' Usuários -> CDN
+browser --> cdn : HTTPS
+mobile_browser --> cdn : HTTPS
+
+' CDN -> Load Balancer
+cdn --> lb : HTTPS
+browser --> lb : HTTPS (API)
+mobile_browser --> lb : HTTPS (API)
+
+' Load Balancer -> App Servers
+lb --> app1 : HTTP/2
+lb --> app2 : HTTP/2
+lb --> appN : HTTP/2
+
+' App Servers -> Database
+app1 --> pg_primary : TCP/5432 (Write)
+app2 --> pg_primary : TCP/5432 (Write)
+appN --> pg_primary : TCP/5432 (Write)
+
+app1 --> pg_replica : TCP/5432 (Read)
+app2 --> pg_replica : TCP/5432 (Read)
+appN --> pg_replica : TCP/5432 (Read)
+
+' Database Replication
+pg_primary --> pg_replica : WAL Streaming
+
+' App Servers -> Redis
+app1 --> redis_cluster : TCP/6379
+app2 --> redis_cluster : TCP/6379
+appN --> redis_cluster : TCP/6379
+
+' App Servers -> Message Broker
+app1 --> broker : AMQP
+app2 --> broker : AMQP
+appN --> broker : AMQP
+
+' Workers -> Message Broker
+broker --> worker : Consume
+
+' Workers -> Database
+worker --> pg_primary : TCP/5432
+
+' Workers -> Storage
+worker --> s3 : HTTPS (Upload)
+
+' App Servers -> Storage
+app1 --> s3 : HTTPS (Upload/Download)
+app2 --> s3 : HTTPS (Upload/Download)
+appN --> s3 : HTTPS (Upload/Download)
+
+' Workers -> Email Service
+worker --> ses : HTTPS
+
+' Monitoring
+app1 ..> monitoring : Logs/Métricas
+app2 ..> monitoring : Logs/Métricas
+appN ..> monitoring : Logs/Métricas
+worker ..> monitoring : Logs/Métricas
+
+' Backup
+pg_primary ..> backup : Backup diário
+s3 ..> backup : Snapshot
+
+' ==================== NOTAS DE DEPLOYMENT ====================
+
+note top of lb
+    **Load Balancer Configuration**
+    - Health check: /api/health
+    - Timeout: 30s
+    - Max connections: 10000
+    - SSL: TLS 1.3
+end note
+
+note bottom of app1
+    **Container Specs**
+    - CPU: 2 vCPU
+    - RAM: 4 GB
+    - Disk: 20 GB SSD
+    - Auto-scaling: 2-10 instâncias
+end note
+
+note bottom of worker
+    **Worker Configuration**
+    - Concurrency: 4
+    - Max tasks per child: 1000
+    - Prefetch multiplier: 4
+end note
+
+@enduml

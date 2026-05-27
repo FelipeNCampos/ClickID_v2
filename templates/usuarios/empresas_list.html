@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block title %}Empresas - ClickID{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-buildings"></i> Empresas</h2>
+    <a href="{% url 'web-gerente:empresa-create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Nova Empresa
+    </a>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="GET" action="" class="row g-3" id="filterForm">
+            <div class="col-md-6">
+                <label for="search" class="form-label">Buscar</label>
+                <input 
+                    type="text" 
+                    class="form-control" 
+                    id="search" 
+                    name="search" 
+                    placeholder="Razão Social ou CNPJ" 
+                    value="{{ search }}"
+                >
+            </div>
+            <div class="col-md-3">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">Todos</option>
+                    <option value="ativo" {% if status_filter == 'ativo' %}selected{% endif %}>Ativo</option>
+                    <option value="inativo" {% if status_filter == 'inativo' %}selected{% endif %}>Inativo</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <a href="{% url 'web-gerente:empresas-list' %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Limpar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if page_obj %}
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Razão Social</th>
+                            <th>CNPJ</th>
+                            <th>Email</th>
+                            <th>Telefone</th>
+                            <th>Status</th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for empresa in page_obj %}
+                        <tr>
+                            <td><strong>{{ empresa.razao_social }}</strong></td>
+                            <td>{{ empresa.cnpj }}</td>
+                            <td>{{ empresa.usuario_email|default:'-' }}</td>
+                            <td>{{ empresa.telefone|default:'-' }}</td>
+                            <td>
+                                <form method="POST" action="{% url 'web-gerente:empresa-toggle-active' empresa.usuario %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    {% if empresa.is_active %}
+                                        <button type="submit" class="btn btn-sm btn-success" title="Empresa Ativa - Clique para desativar">
+                                            <i class="bi bi-check-circle"></i> Ativo
+                                        </button>
+                                    {% else %}
+                                        <button type="submit" class="btn btn-sm btn-danger" title="Empresa Inativa - Clique para ativar">
+                                            <i class="bi bi-x-circle"></i> Inativo
+                                        </button>
+                                    {% endif %}
+                                </form>
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'web-gerente:empresa-detail' empresa.usuario %}" 
+                                   class="btn btn-sm btn-info" title="Ver detalhes">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'web-gerente:empresa-edit' empresa.usuario %}" 
+                                   class="btn btn-sm btn-warning" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Paginação -->
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="Navegação de página">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}&search={{ search }}">Anterior</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}&status={{ status_filter }}&search={{ search }}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}&search={{ search }}">Próximo</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Nenhuma empresa encontrada.
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-submit do formulário quando os filtros mudarem
+const filterForm = document.getElementById('filterForm');
+const searchInput = document.getElementById('search');
+const statusSelect = document.getElementById('status');
+
+// Debounce para o campo de busca (aguarda 1500ms após parar de digitar)
+let searchTimeout;
+searchInput.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        filterForm.submit();
+    }, 1500);
+});
+
+// Submit imediato ao mudar o status
+statusSelect.addEventListener('change', function() {
+    filterForm.submit();
+});
+</script>
+{% endblock %}

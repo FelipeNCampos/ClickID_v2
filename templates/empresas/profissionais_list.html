@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}Profissionais - ClickID{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="bi bi-people"></i> Cartões</h2>
+        <p class="text-muted mb-0">Gerencie os cartões da sua empresa</p>
+    </div>
+    <div>
+        <a href="{% url 'web-empresa:profissionais-import' %}" class="btn btn-success me-2">
+            <i class="bi bi-file-earmark-excel"></i> Importar Dados
+        </a>
+        
+        <a href="{% url 'web-empresa:profissional-create' %}" class="btn btn-primary">
+            <i class="bi bi-person-plus"></i> Novo Cartão
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="get" class="mb-3">
+            <div class="input-group">
+                <input type="text" name="busca" class="form-control" placeholder="Pesquisar por nome..." value="{{ busca|default:'' }}">
+                <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i> Pesquisar</button>
+            </div>
+        </form>
+        {% if page_obj.object_list %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>CPF</th>
+                        <th>Email</th>
+                        <th>Departamento</th>
+                        <th>Status</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for profissional in page_obj.object_list %}
+                    <tr>
+                        <td>
+                            <strong>{{ profissional.nome }}</strong>
+                        </td>
+                        <td>{{ profissional.cpf }}</td>
+                        <td>
+                            {% if profissional.email %}
+                                <small class="text-muted">{{ profissional.email }}</small>
+                            {% else %}
+                                <small class="text-muted">-</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if profissional.departamento_nome %}
+                                <span class="badge bg-info">{{ profissional.departamento_nome }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if profissional.is_active %}
+                                <span class="badge bg-success">Ativo</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inativo</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'web-empresa:profissional-detail' profissional.usuario %}" class="btn btn-sm btn-info" title="Ver detalhes">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'web-empresa:profissional-edit' profissional.usuario %}" class="btn btn-sm btn-warning" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form method="POST" action="{% url 'web-empresa:profissional-toggle-active' profissional.usuario %}" class="d-inline">
+                                {% csrf_token %}
+                                {% if profissional.is_active %}
+                                <button type="submit" class="btn btn-sm btn-secondary" title="Desativar" onclick="return confirm('Deseja desativar este profissional?')">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                                {% else %}
+                                <button type="submit" class="btn btn-sm btn-success" title="Ativar" onclick="return confirm('Deseja ativar este profissional?')">
+                                    <i class="bi bi-check-circle"></i>
+                                </button>
+                                {% endif %}
+                            </form>
+                            <form method="POST" action="{% url 'web-empresa:profissional-delete' profissional.usuario %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger" title="Excluir" onclick="return confirm('ATENÇÃO: Deseja realmente excluir este profissional?')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginação -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Navegação de página">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+                </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">Próximo</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-people" style="font-size: 4rem; color: #ccc;"></i>
+            <h5 class="mt-3 text-muted">Nenhum cartão cadastrado</h5>
+            <p class="text-muted">Comece adicionando seu primeiro cartão</p>
+            <div class="mt-3">
+                <a href="{% url 'web-empresa:profissional-create' %}" class="btn btn-primary me-2">
+                    <i class="bi bi-person-plus"></i> Novo Cartão
+                </a>
+                <a href="{% url 'web-empresa:profissionais-import' %}" class="btn btn-success">
+                    <i class="bi bi-file-earmark-excel"></i> Importar Dados
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

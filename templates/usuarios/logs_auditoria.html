@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block title %}Logs de Auditoria - ClickID{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'web-gerente:dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Logs de Auditoria</li>
+            </ol>
+        </nav>
+        <h2><i class="bi bi-list-ul"></i> Logs de Auditoria</h2>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Histórico de Ações</h5>
+    </div>
+    <div class="card-body">
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Usuário</th>
+                        <th>Ação</th>
+                        <th>Entidade</th>
+                        <th>Detalhes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in page_obj %}
+                    <tr>
+                        <td>{{ log.data_hora|date:"d/m/Y H:i:s"|default:"-" }}</td>
+                        <td>{{ log.usuario_email|default:"-" }}</td>
+                        <td>
+                            {% if log.acao == 'create' %}
+                                <span class="badge bg-success">Criação</span>
+                            {% elif log.acao == 'update' %}
+                                <span class="badge bg-warning">Atualização</span>
+                            {% elif log.acao == 'delete' %}
+                                <span class="badge bg-danger">Exclusão</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ log.acao }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ log.entidade|default:"-" }}</td>
+                        <td>
+                            <small class="text-muted">{{ log.detalhes|default:"-"|truncatewords:10 }}</small>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginação -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Navegação de logs">
+            <ul class="pagination justify-content-center mb-0">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1">Primeira</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+                    </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Última</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Nenhum log de auditoria encontrado.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

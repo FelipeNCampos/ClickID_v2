@@ -1,0 +1,76 @@
+{% load static %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{% url 'web-gerente:home' %}">
+            {# Prefer showing company logo/name when available; handle both Model instances and dicts returned by proxy views #}
+            {% if empresa %}
+                {% comment %} determine logo URL: try FieldFile.url then fallback to string value {% endcomment %}
+                {% if empresa.logo %}
+                    {% if empresa.logo.url %}
+                        <img src="{{ empresa.logo.url }}" alt="{{ empresa.nome_fantasia|default:empresa.razao_social|default:'ClickID' }}" height="32" class="me-1">
+                    {% else %}
+                        <img src="{{ empresa.logo }}" alt="{{ empresa.nome_fantasia|default:empresa.razao_social|default:'ClickID' }}" height="32" class="me-1">
+                    {% endif %}
+                {% else %}
+                    <img src="{% static 'images/LogoMichiganSemFundoBranca.png' %}" alt="ClickID" height="32" class="me-1">
+                {% endif %}
+                {{ empresa.nome_fantasia|default:empresa.razao_social|default:'ClickID' }}
+            {% else %}
+                <img src="{% static 'images/LogoMichiganSemFundoBranca.png' %}" alt="ClickID" height="32" class="me-1">
+            {% endif %}
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            {% if user.is_authenticated %}
+                {% if user.tipo_usuario == 'gerente' %}
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'web-gerente:dashboard' %}">Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'web-gerente:empresas-list' %}"><i class="bi bi-buildings me-1"></i> Empresas</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'web-gerente:coletas-list' %}">Pedidos</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'web-gerente:logs' %}">Logs</a>
+                        </li>
+                    </ul>
+                {% elif user.tipo_usuario == 'empresa' %}
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'web-empresa:dashboard' %}">Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'web-empresa:profissionais-list' %}">Cartões</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'web-empresa:coletas-list' %}">Pedidos</a>
+                        </li>
+                    </ul>
+                {% endif %}
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" 
+                           data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> 
+                            {% if user.tipo_usuario == 'empresa' and empresa_nome %}
+                                {{ empresa_nome }}
+                            {% else %}
+                                {{ user.email }}
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{% url 'web-gerente:logout' %}">
+                                <i class="bi bi-box-arrow-right"></i> Sair
+                            </a></li>
+                        </ul>
+                    </li>
+                </ul>
+            {% endif %}
+        </div>
+    </div>
+</nav>

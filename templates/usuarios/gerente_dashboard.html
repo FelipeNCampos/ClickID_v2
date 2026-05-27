@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Dashboard Gerente - ClickID{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-speedometer2"></i> Dashboard Gerente</h2>
+    <a href="{% url 'web-gerente:empresa-create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Nova Empresa
+    </a>
+</div>
+
+<!-- Cards de Estatísticas -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-white">Total de Empresas</h6>
+                        <h2 class="mb-0 text-white">{{ total_empresas }}</h2>
+                    </div>
+                    <div>
+                        <i class="bi bi-buildings text-white" style="font-size: 3rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-primary bg-opacity-50">
+                <a href="{% url 'web-gerente:empresas-list' %}" class="text-white text-decoration-none">
+                    Ver todas <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-white">Total de Usuários</h6>
+                        <h2 class="mb-0 text-white">{{ total_usuarios }}</h2>
+                    </div>
+                    <div>
+                        <i class="bi bi-people text-white" style="font-size: 3rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-success bg-opacity-50">
+                <small class="text-white">Sistema ativo</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-dark">Gerentes</h6>
+                        <h2 class="mb-0 text-dark">{{ total_gerentes }}</h2>
+                    </div>
+                    <div>
+                        <i class="bi bi-person-badge text-dark" style="font-size: 3rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-info bg-opacity-50">
+                <small class="text-dark">Administradores</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-dark">Coletas</h6>
+                        <h2 class="mb-0 text-dark">{{ total_coletas }}</h2>
+                    </div>
+                    <div>
+                        <i class="bi bi-clipboard-data text-dark" style="font-size: 3rem; opacity: 0.3;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-warning bg-opacity-50">
+                <a href="{% url 'web-gerente:coletas-list' %}" class="text-dark text-decoration-none">
+                    Gerenciar <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Empresas Recentes -->
+<div class="row">
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-building"></i> Empresas Recentes</h5>
+            </div>
+            <div class="card-body">
+                {% if empresas_recentes %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Razão Social</th>
+                                    <th>CNPJ</th>
+                                    <th>Email</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for empresa in empresas_recentes %}
+                                <tr>
+                                    <td><strong>{{ empresa.razao_social }}</strong></td>
+                                    <td>{{ empresa.cnpj }}</td>
+                                    <td>{{ empresa.usuario_email|default:'-' }}</td>
+                                    <td>
+                                        <a href="{% url 'web-gerente:empresa-detail' empresa.usuario %}" 
+                                           class="btn btn-sm btn-info" title="Ver detalhes">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="{% url 'web-gerente:empresa-edit' empresa.usuario %}" 
+                                           class="btn btn-sm btn-warning" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'web-gerente:empresas-list' %}" class="btn btn-primary">
+                            Ver Todas as Empresas <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-building" style="font-size: 3rem; color: #ccc;"></i>
+                        <p class="text-muted mt-3">Nenhuma empresa cadastrada ainda</p>
+                        <a href="{% url 'web-gerente:empresa-create' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Cadastrar Primeira Empresa
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Logs Recentes -->
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Atividade Recente</h5>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% if logs_recentes %}
+                    <div class="list-group list-group-flush">
+                        {% for log in logs_recentes %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ log.acao }}</h6>
+                                <small class="text-muted">{{ log.data_hora|slice:":10" }}</small>
+                            </div>
+                            <p class="mb-1 small text-muted">
+                                <i class="bi bi-person"></i> {{ log.usuario.email }}
+                            </p>
+                            {% if log.ip_address %}
+                            <small class="text-muted">IP: {{ log.ip_address }}</small>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'web-gerente:logs' %}" class="btn btn-sm btn-secondary">
+                            Ver Todos os Logs <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-clock-history" style="font-size: 3rem; color: #ccc;"></i>
+                        <p class="text-muted mt-3">Nenhuma atividade registrada</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ações Rápidas -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-lightning"></i> Ações Rápidas</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <a href="{% url 'web-gerente:empresa-create' %}" class="btn btn-outline-primary w-100 mb-2">
+                            <i class="bi bi-building-add"></i><br>
+                            Nova Empresa
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'web-gerente:empresas-list' %}" class="btn btn-outline-info w-100 mb-2">
+                            <i class="bi bi-list-ul"></i><br>
+                            Listar Empresas
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'web-gerente:logs' %}" class="btn btn-outline-secondary w-100 mb-2">
+                            <i class="bi bi-journal-text"></i><br>
+                            Logs de Auditoria
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="/admin/" class="btn btn-outline-dark w-100 mb-2" target="_blank">
+                            <i class="bi bi-gear"></i><br>
+                            Admin Django
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

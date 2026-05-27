@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+
+{% block title %}Alterar Senha - ClickID{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0"><i class="bi bi-key"></i> Alterar Senha</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Atenção:</strong> A nova senha deve ter pelo menos 8 caracteres.
+                    </div>
+
+                    <form method="POST" id="formAlterarSenha">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="senha_atual" class="form-label">Senha Atual *</label>
+                            <div class="input-group">
+                                <input 
+                                    type="password" 
+                                    class="form-control" 
+                                    id="senha_atual" 
+                                    name="senha_atual" 
+                                    required
+                                    autofocus
+                                >
+                                <button class="btn btn-outline-secondary" type="button" id="toggleSenhaAtual">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">Digite sua senha atual (padrão: últimos 4 dígitos do CPF)</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="nova_senha" class="form-label">Nova Senha *</label>
+                            <div class="input-group">
+                                <input 
+                                    type="password" 
+                                    class="form-control" 
+                                    id="nova_senha" 
+                                    name="nova_senha" 
+                                    required
+                                    minlength="8"
+                                >
+                                <button class="btn btn-outline-secondary" type="button" id="toggleNovaSenha">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <div id="senhaInfo" class="form-text text-danger"><strong>Mínimo de 8 caracteres</strong></div>
+                            <div id="senhaForte" class="form-text mt-1" style="display: none;">
+                                <i class="bi bi-check-circle-fill text-success"></i> Senha válida!
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="confirmar_senha" class="form-label">Confirmar Nova Senha *</label>
+                            <div class="input-group">
+                                <input 
+                                    type="password" 
+                                    class="form-control" 
+                                    id="confirmar_senha" 
+                                    name="confirmar_senha" 
+                                    required
+                                    minlength="8"
+                                >
+                                <button class="btn btn-outline-secondary" type="button" id="toggleConfirmarSenha">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">Digite a nova senha novamente</div>
+                            <div id="senhaMatch" class="form-text mt-1" style="display: none;"></div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'profissional:dashboard' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Voltar
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-check-circle"></i> Alterar Senha
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6 class="text-muted">
+                        <i class="bi bi-shield-check"></i> Dicas de Segurança
+                    </h6>
+                    <ul class="small text-muted mb-0">
+                        <li>Não compartilhe sua senha com ninguém</li>
+                        <li>Use uma senha diferente de outros sistemas</li>
+                        <li>Evite usar informações pessoais óbvias</li>
+                        <li>Considere usar letras, números e símbolos</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Toggle visibility das senhas
+document.getElementById('toggleSenhaAtual').addEventListener('click', function() {
+    const input = document.getElementById('senha_atual');
+    const icon = this.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.replace('bi-eye', 'bi-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.replace('bi-eye-slash', 'bi-eye');
+    }
+});
+
+document.getElementById('toggleNovaSenha').addEventListener('click', function() {
+    const input = document.getElementById('nova_senha');
+    const icon = this.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.replace('bi-eye', 'bi-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.replace('bi-eye-slash', 'bi-eye');
+    }
+});
+
+document.getElementById('toggleConfirmarSenha').addEventListener('click', function() {
+    const input = document.getElementById('confirmar_senha');
+    const icon = this.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.replace('bi-eye', 'bi-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.replace('bi-eye-slash', 'bi-eye');
+    }
+});
+
+// Validar força da senha em tempo real
+document.getElementById('nova_senha').addEventListener('input', function() {
+    const senha = this.value;
+    const indicator = document.getElementById('senhaForte');
+    const senhaInfo = document.getElementById('senhaInfo');
+    
+    if (senha.length >= 8) {
+        indicator.style.display = 'block';
+        senhaInfo.classList.remove('text-danger');
+        senhaInfo.classList.add('text-primary');
+        senhaInfo.innerHTML = '<strong><i class="bi bi-info-circle"></i> Mínimo de 8 caracteres</strong>';
+        this.classList.remove('is-invalid');
+        this.classList.add('is-valid');
+    } else {
+        indicator.style.display = 'none';
+        senhaInfo.classList.remove('text-primary');
+        senhaInfo.classList.add('text-danger');
+        senhaInfo.innerHTML = '<strong>Mínimo de 8 caracteres</strong>';
+        this.classList.remove('is-valid');
+        if (senha.length > 0) {
+            this.classList.add('is-invalid');
+        }
+    }
+});
+
+// Validar se as senhas coincidem em tempo real
+document.getElementById('confirmar_senha').addEventListener('input', function() {
+    const novaSenha = document.getElementById('nova_senha').value;
+    const confirmarSenha = this.value;
+    const matchIndicator = document.getElementById('senhaMatch');
+    
+    if (confirmarSenha.length > 0) {
+        if (novaSenha === confirmarSenha) {
+            matchIndicator.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i> Senhas coincidem!';
+            matchIndicator.style.display = 'block';
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+        } else {
+            matchIndicator.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i> Senhas não coincidem';
+            matchIndicator.style.display = 'block';
+            this.classList.remove('is-valid');
+            this.classList.add('is-invalid');
+        }
+    } else {
+        matchIndicator.style.display = 'none';
+        this.classList.remove('is-valid', 'is-invalid');
+    }
+});
+
+// Validar antes de enviar
+document.getElementById('formAlterarSenha').addEventListener('submit', function(e) {
+    const novaSenha = document.getElementById('nova_senha').value;
+    const confirmarSenha = document.getElementById('confirmar_senha').value;
+    
+    if (novaSenha.length < 8) {
+        e.preventDefault();
+        alert('A nova senha deve ter pelo menos 8 caracteres!');
+        return;
+    }
+    
+    if (novaSenha !== confirmarSenha) {
+        e.preventDefault();
+        alert('As senhas não coincidem!');
+        return;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ modelo.nome }} - Detalhes{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mt-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:empresas-list' %}">Empresas</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:empresa-detail' empresa.id %}">{{ empresa.nome_fantasia }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'web-gerente:modelos-list' empresa.id %}">Modelos</a></li>
+            <li class="breadcrumb-item active">{{ modelo.nome }}</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">{{ modelo.nome }}</h1>
+            <p class="text-muted">{{ empresa.nome_fantasia }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'web-gerente:modelo-canvas-editor' empresa.id modelo.id %}" class="btn btn-success">
+                <i class="bi bi-palette me-2"></i>Editor Canvas
+            </a>
+            <a href="{% url 'web-gerente:modelo-edit' empresa.id modelo.id %}" class="btn btn-primary">
+                <i class="bi bi-pencil me-2"></i>Editar
+            </a>
+            
+            <!-- Toggle Active -->
+            <form method="post" action="{% url 'web-gerente:modelo-toggle-active' empresa.id modelo.id %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-{% if modelo.is_active %}warning{% else %}success{% endif %}"
+                        onclick="return confirm('Deseja {% if modelo.is_active %}desativar{% else %}ativar{% endif %} este modelo?')">
+                    <i class="bi bi-{% if modelo.is_active %}x-circle{% else %}check-circle{% endif %} me-2"></i>
+                    {% if modelo.is_active %}Desativar{% else %}Ativar{% endif %}
+                </button>
+            </form>
+            
+            <!-- Delete -->
+            <form method="post" action="{% url 'web-gerente:modelo-delete' empresa.id modelo.id %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger"
+                        onclick="return confirm('⚠️ ATENÇÃO!\n\nTem certeza que deseja excluir este modelo?\n\nEsta ação NÃO pode ser desfeita!')">
+                    <i class="bi bi-trash me-2"></i>Excluir
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Mensagens -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        <!-- Informações Principais -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Informações do Modelo</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong class="text-muted">Nome:</strong>
+                            <p class="mb-0">{{ modelo.nome }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong class="text-muted">Status:</strong>
+                            <p class="mb-0">
+                                {% if modelo.is_active %}
+                                    <span class="badge bg-success">Ativo</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inativo</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong class="text-muted">Largura:</strong>
+                            <p class="mb-0">{{ modelo.largura_mm }} mm</p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong class="text-muted">Altura:</strong>
+                            <p class="mb-0">{{ modelo.altura_mm }} mm</p>
+                        </div>
+                    </div>
+
+                    {% if modelo.descricao %}
+                        <div class="mb-3">
+                            <strong class="text-muted">Descrição:</strong>
+                            <p class="mb-0">{{ modelo.descricao }}</p>
+                        </div>
+                    {% endif %}
+
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong class="text-muted">Criado em:</strong>
+                            <p class="mb-0">
+                                {{ modelo.created_at_formatted|default:"Não disponível" }}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <strong class="text-muted">Última atualização:</strong>
+                            <p class="mb-0">
+                                {{ modelo.updated_at_formatted|default:"Não disponível" }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview do Cartão -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Preview do Cartão</h5>
+                    <span class="badge bg-info">CR-80: 85.6×54mm</span>
+                </div>
+                <div class="card-body text-center bg-light p-4">
+                    <!-- Frente -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-2"><i class="bi bi-card-heading"></i> Frente</h6>
+                        <div class="d-inline-block border border-2 border-dark rounded-2 shadow" 
+                             style="width: 85.6mm; 
+                                    height: 54mm; 
+                                    background-color: {{ modelo.background_color|default:'#FFFFFF' }};
+                                    {% if modelo.background_image %}
+                                    background-image: url('{{ modelo.background_image }}');
+                                    background-size: cover;
+                                    background-position: center;
+                                    {% endif %}
+                                    position: relative;
+                                    overflow: hidden;">
+                            {% if not modelo.background_image %}
+                            <div class="d-flex align-items-center justify-content-center h-100 flex-column">
+                                <i class="bi bi-credit-card display-4 text-muted mb-2"></i>
+                                <p class="text-muted small mb-0">85.6 × 54 mm</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Verso -->
+                    <div>
+                        <h6 class="text-muted mb-2"><i class="bi bi-card-text"></i> Verso</h6>
+                        <div class="d-inline-block border border-2 border-dark rounded-2 shadow" 
+                             style="width: 85.6mm; 
+                                    height: 54mm; 
+                                    background-color: {{ modelo.background_color_verso|default:'#FFFFFF' }};
+                                    {% if modelo.background_image_verso %}
+                                    background-image: url('{{ modelo.background_image_verso }}');
+                                    background-size: cover;
+                                    background-position: center;
+                                    {% endif %}
+                                    position: relative;
+                                    overflow: hidden;">
+                            {% if not modelo.background_image_verso %}
+                            <div class="d-flex align-items-center justify-content-center h-100 flex-column">
+                                <i class="bi bi-credit-card-2-back display-4 text-muted mb-2"></i>
+                                <p class="text-muted small mb-0">85.6 × 54 mm</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <p class="text-muted small mt-3 mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Preview visual do tamanho real do cartão (escala 1:1)
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Estatísticas -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Estatísticas</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">Empresa:</span>
+                        <strong>{{ empresa.nome_fantasia }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">Dimensões:</span>
+                        <strong>{{ modelo.largura_mm }} × {{ modelo.altura_mm }} mm</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Status:</span>
+                        <strong>
+                            {% if modelo.is_active %}
+                                <span class="text-success">Ativo</span>
+                            {% else %}
+                                <span class="text-secondary">Inativo</span>
+                            {% endif %}
+                        </strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informações Adicionais -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Informações</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">
+                        <strong>Uso do Modelo:</strong><br>
+                        Este modelo pode ser usado para criar cartões personalizados com logo e dados da empresa.
+                    </p>
+                    <p class="small mb-2">
+                        <strong>Edição:</strong><br>
+                        Você pode editar o nome, descrição e dimensões do modelo a qualquer momento.
+                    </p>
+                    <p class="small mb-0">
+                        <strong>Status:</strong><br>
+                        Modelos inativos não podem ser usados para criar novos cartões, mas os existentes continuam funcionando.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Ações Rápidas -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Ações Rápidas</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'web-gerente:modelo-edit' empresa.id modelo.id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-pencil me-2"></i>Editar Modelo
+                        </a>
+                        <a href="{% url 'web-gerente:modelos-list' empresa.id %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Voltar para Lista
+                        </a>
+                        <a href="{% url 'web-gerente:empresa-detail' empresa.id %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-building me-2"></i>Ver Empresa
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<!-- Scripts adicionais se necessário -->
+{% endblock %}
+{% endblock %}

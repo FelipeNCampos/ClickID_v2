@@ -1,0 +1,117 @@
+{% extends 'profissional/base_profissional.html' %}
+
+{% block title %}Formulário Enviado - {{ empresa.nome_fantasia|default:'ClickID' }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'profissional:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Formulário Enviado</li>
+        </ol>
+    </nav>
+
+    {% if coleta %}
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="bi bi-check-circle"></i> Formulário Enviado com Sucesso</h5>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <strong>Nome da Coleta:</strong>
+                </div>
+                <div class="col-md-8">
+                    {{ coleta.nome }}
+                </div>
+            </div>
+
+            {% if coleta.descricao %}
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <strong>Descrição:</strong>
+                </div>
+                <div class="col-md-8">
+                    {{ coleta.descricao }}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <strong>Status:</strong>
+                </div>
+                <div class="col-md-8">
+                    <span class="badge bg-success">
+                        <i class="bi bi-check-circle"></i> CONCLUÍDO
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dados Enviados -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> Dados Enviados</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> 
+                <strong>Seus dados foram enviados com sucesso!</strong>
+                <p class="mb-0 mt-2">
+                    Este formulário foi concluído e os dados estão sendo processados pela empresa.
+                    Você pode visualizar o status de todos os seus formulários no dashboard.
+                </p>
+            </div>
+
+            <!-- Mostrar informações básicas se disponíveis -->
+            {% if coleta.tipo_coleta %}
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <strong>Tipo de Coleta:</strong>
+                </div>
+                <div class="col-md-8">
+                    {% if coleta.tipo_coleta == 'modelo_ativo' %}
+                        <span class="badge bg-primary">Modelo Ativo</span>
+                    {% elif coleta.tipo_coleta == 'dados_extras' %}
+                        <span class="badge bg-success">Dados Extras</span>
+                    {% else %}
+                        <span class="text-muted">Não definido</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if coleta.modelo_nome %}
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <strong>Modelo:</strong>
+                </div>
+                <div class="col-md-8">
+                    <span class="badge bg-info">{{ coleta.modelo_nome }}</span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="text-center">
+        <a href="{% url 'profissional:dashboard' %}" class="btn btn-primary">
+            <i class="bi bi-house"></i> Voltar ao Dashboard
+        </a>
+    </div>
+
+    {% else %}
+    <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle"></i>
+        <strong>Erro!</strong> Não foi possível carregar os dados do formulário.
+    </div>
+    <div class="text-center">
+        <a href="{% url 'profissional:dashboard' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar ao Dashboard
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,217 @@
+@startuml ClickID - Diagrama de Componentes
+
+title Arquitetura de Componentes - Sistema ClickID
+
+!define RECTANGLE class
+
+' ==================== CAMADA DE APRESENTAÇÃO ====================
+package "Camada de Apresentação" {
+    component "Frontend Web" as frontend {
+        [Portal Gerente] as portal_gerente
+        [Portal Empresa] as portal_empresa
+        [Portal Profissional] as portal_profissional
+        [Dashboard Componentes] as dashboard
+        [Formulário Dinâmico] as form_dynamic
+        [Canvas Assinatura] as canvas
+        [Captura de Foto] as camera
+    }
+}
+
+' ==================== CAMADA DE API ====================
+package "Camada de API" {
+    component "API Gateway" as api_gateway {
+        [Autenticação JWT] as jwt
+        [Rate Limiting] as rate_limit
+        [CORS Handler] as cors
+        [Request Validator] as validator
+    }
+    
+    component "REST API" as rest_api {
+        [Auth Controller] as auth_ctrl
+        [Gerente Controller] as gerente_ctrl
+        [Empresa Controller] as empresa_ctrl
+        [Profissional Controller] as prof_ctrl
+        [Coleta Controller] as coleta_ctrl
+        [Dashboard Controller] as dash_ctrl
+    }
+}
+
+' ==================== CAMADA DE NEGÓCIO ====================
+package "Camada de Negócio" {
+    component "Serviços de Negócio" {
+        [User Service] as user_service
+        [Coleta Service] as coleta_service
+        [Modelo Service] as modelo_service
+        [Departamento Service] as dept_service
+        [Notificação Service] as notif_service
+        [Dashboard Service] as dashboard_service
+        [Export Service] as export_service
+        [Validation Service] as valid_service
+    }
+    
+    component "Processadores" {
+        [Excel Processor] as excel_proc
+        [Image Processor] as image_proc
+        [Signature Validator] as sig_validator
+        [PDF Generator] as pdf_gen
+    }
+}
+
+' ==================== CAMADA DE DADOS ====================
+package "Camada de Dados" {
+    component "Repositórios" {
+        [User Repository] as user_repo
+        [Coleta Repository] as coleta_repo
+        [Resposta Repository] as resp_repo
+        [Log Repository] as log_repo
+    }
+    
+    database "PostgreSQL" as postgres {
+        [Usuários] as tb_users
+        [Empresas] as tb_empresas
+        [Profissionais] as tb_profissionais
+        [Coletas] as tb_coletas
+        [Respostas] as tb_respostas
+        [Logs] as tb_logs
+    }
+}
+
+' ==================== CAMADA DE INTEGRAÇÃO ====================
+package "Serviços Externos" {
+    component "Amazon S3" as s3 {
+        [Bucket Fotos] as s3_photos
+        [Bucket Assinaturas] as s3_signatures
+        [Bucket Exports] as s3_exports
+    }
+    
+    component "Email Service" as email_service {
+        [SMTP Server] as smtp
+        [Template Engine] as template_engine
+        [Queue Manager] as email_queue
+    }
+    
+    component "Autenticação" as auth_external {
+        [OAuth Provider] as oauth
+        [JWT Generator] as jwt_gen
+    }
+}
+
+' ==================== INFRAESTRUTURA ====================
+package "Infraestrutura" {
+    component "Cache Layer" as cache {
+        [Redis] as redis
+    }
+    
+    component "Message Queue" as mq {
+        [RabbitMQ / Celery] as rabbit
+    }
+    
+    component "Monitoring" as monitor {
+        [Application Logs] as app_logs
+        [Error Tracking] as error_track
+        [Performance Metrics] as metrics
+    }
+}
+
+' ==================== RELACIONAMENTOS ====================
+
+' Frontend -> API Gateway
+portal_gerente --> api_gateway : HTTPS
+portal_empresa --> api_gateway : HTTPS
+portal_profissional --> api_gateway : HTTPS
+
+' API Gateway -> Controllers
+api_gateway --> rest_api : Requisições validadas
+
+' Controllers -> Services
+auth_ctrl --> user_service
+gerente_ctrl --> coleta_service
+gerente_ctrl --> modelo_service
+gerente_ctrl --> dashboard_service
+empresa_ctrl --> coleta_service
+empresa_ctrl --> dept_service
+prof_ctrl --> coleta_service
+coleta_ctrl --> coleta_service
+dash_ctrl --> dashboard_service
+
+' Services -> Repositories
+user_service --> user_repo
+coleta_service --> coleta_repo
+coleta_service --> resp_repo
+dashboard_service --> log_repo
+notif_service --> log_repo
+
+' Services -> Processadores
+coleta_service --> excel_proc
+coleta_service --> image_proc
+coleta_service --> sig_validator
+export_service --> pdf_gen
+
+' Repositories -> Database
+user_repo --> postgres
+coleta_repo --> postgres
+resp_repo --> postgres
+log_repo --> postgres
+
+' Services -> Cache
+dashboard_service ..> redis : Cache de métricas
+coleta_service ..> redis : Cache de sessões
+
+' Services -> Message Queue
+notif_service --> rabbit : Enfileirar emails
+export_service --> rabbit : Processar exports
+
+' Message Queue -> External Services
+rabbit --> email_service : Processar fila
+rabbit --> s3 : Upload assíncrono
+
+' External Services
+image_proc --> s3_photos : Upload
+sig_validator --> s3_signatures : Upload
+export_service --> s3_exports : Upload
+notif_service --> email_service : Enviar emails
+auth_ctrl --> auth_external : Validar token
+
+' Monitoring
+rest_api ..> monitor : Logs
+coleta_service ..> monitor : Métricas
+notif_service ..> monitor : Tracking
+
+' ==================== NOTAS ====================
+
+note right of api_gateway
+    - Validação de JWT
+    - Rate limiting por IP
+    - CORS configurável
+    - Request/Response logging
+end note
+
+note right of postgres
+    - Multi-tenancy por empresa
+    - Índices otimizados
+    - Backup automático
+    - Replicação read-replica
+end note
+
+note bottom of s3
+    - Armazenamento escalável
+    - CDN para distribuição
+    - Lifecycle policies
+    - Versionamento habilitado
+end note
+
+note bottom of rabbit
+    - Processamento assíncrono
+    - Retry automático
+    - Dead letter queue
+    - Priority queues
+end note
+
+note left of redis
+    - Cache de sessões
+    - Cache de métricas
+    - TTL configurável
+    - Cluster mode
+end note
+
+@enduml
