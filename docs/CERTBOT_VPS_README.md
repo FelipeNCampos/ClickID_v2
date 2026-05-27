@@ -66,6 +66,7 @@ Troubleshooting
 - "Certbot doesn't know how to automatically configure the web server": that's expected if certbot can't modify nginx. We use `certonly --webroot` which avoids automatic nginx config.
 - HTTP challenge fails: ensure nginx is running and `/.well-known/acme-challenge/` is served from `deploy/nginx/webroot` and port 80 is open.
 - Rate limit: use `--staging` flag for testing.
+- `ERROR: for <service> 'ContainerConfig'`: this usually happens when the VPS is still using legacy Compose v1 (`docker-compose` 1.29.x). Prefer `docker compose ...` with the Compose plugin (`docker-compose-plugin`). If the old `web` container is stuck from a previous run, remove it with `docker rm -f clickid_v2_web_1` and retry with `docker compose up -d --build`.
 
 Notes and extras
 - The `docker-compose.yml` includes a `certbot` service that uses the webroot plugin and reads `LETSENCRYPT_DOMAINS` and `LETSENCRYPT_EMAIL` from `.env`—running `docker compose run --rm certbot` will invoke that command.
