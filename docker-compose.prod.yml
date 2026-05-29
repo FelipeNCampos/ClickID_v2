@@ -87,9 +87,12 @@ services:
   certbot:
     image: certbot/certbot
     restart: 'no'
+    env_file:
+      - .env.prod
     volumes:
       - certs:/etc/letsencrypt
       - ./deploy/nginx/webroot:/var/www/certbot
+    command: ["certonly", "--webroot", "-w", "/var/www/certbot", "-d", "credenciais.com.br", "-d", "www.credenciais.com.br", "--email", "felipe.n.cmp@gmail.com", "--agree-tos", "--non-interactive"]
 
 volumes:
   pgdata:
