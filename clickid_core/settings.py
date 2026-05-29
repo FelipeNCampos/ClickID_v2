@@ -7,6 +7,7 @@ from decouple import config
 import socket
 import warnings
 from datetime import timedelta
+from urllib.parse import urlparse
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +21,26 @@ def _csv_env(*names, default=''):
     return [item.strip() for item in default.split(',') if item.strip()]
 
 
+def _normalize_origin(origin):
+    parsed = urlparse(origin)
+    if parsed.scheme and parsed.netloc:
+        return origin
+
+    host = origin.strip().lstrip('/')
+    if not host:
+        return host
+
+    is_local = host.startswith('localhost') or host.startswith('127.0.0.1')
+    scheme = 'http' if is_local else 'https'
+    return f'{scheme}://{host}'
+
+
 # Quick-start development settings
 SECRET_KEY = config(
     'SECRET_KEY',
     default=config('DJANGO_SECRET_KEY', default='django-insecure-3shswymd)7v!!fa_=+39fpf^5ajf2hwdu0f^@v42-1mx_a55b@')
 )
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = config('DEBUG', default=False, cast=bool)
 # DEBUG_ALLOWED_IPS: comma separated list of IPs allowed to see debug UI (e.g. the debug button)
 # This can be used in production for temporary debugging without enabling full DEBUG=True.
 DEBUG_ALLOWED_IPS = config(
@@ -254,7 +269,7 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
     default='http://localhost:3000,http://127.0.0.1:3000',
-    cast=lambda v: [s.strip() for s in v.split(',')]
+    cast=lambda v: [_normalize_origin(s.strip()) for s in v.split(',') if s.strip()]
 )
 CORS_ALLOW_CREDENTIALS = True
 
