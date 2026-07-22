@@ -32,6 +32,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       DB_HOST: db
       DB_PORT: ${DB_PORT:-5432}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
     depends_on:
       db:
         condition: service_healthy
@@ -57,13 +59,15 @@ services:
     restart: unless-stopped
     env_file:
       - .env.prod
-    command: ["celery", "-A", "clickid_core", "worker", "-l", "info"]
+    command: ["celery", "-A", "clickid_core", "worker", "-l", "info", "--concurrency", "2"]
     environment:
       DB_NAME: ${DB_NAME:-clickid_db}
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       DB_HOST: db
       DB_PORT: ${DB_PORT:-5432}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
     depends_on:
       - db
       - redis

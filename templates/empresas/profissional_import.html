@@ -220,109 +220,41 @@ async function importFormHandler(e) {
         return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async function(loadEvent) {
-        const data = new Uint8Array(loadEvent.target.result);
-        const workbook = XLSX.read(data, {type: 'array'});
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
-        const totalRows = Math.max(jsonData.length - 1, 0);
+    document.getElementById('progressContainer').style.display = 'block';
+    document.getElementById('formButtons').style.display = 'none';
+    document.getElementById('btnSubmit').disabled = true;
+    updateProgress(0, 0, 0, 'Enviando arquivo para a fila...');
 
-        document.getElementById('progressContainer').style.display = 'block';
-        document.getElementById('formButtons').style.display = 'none';
-        document.getElementById('btnSubmit').disabled = true;
+    const formData = new FormData();
+    formData.append('arquivo', file);
+    formData.append('empresa', '{{ empresa_hidden_id }}');
 
-        const formData = new FormData();
-        formData.append('arquivo', file);
-        formData.append('empresa', '{{ empresa_hidden_id }}');
-
-        try {
-            const csrfTokenField = document.querySelector('input[name="csrfmiddlewaretoken"]');
-            const csrfToken = csrfTokenField ? csrfTokenField.value : '';
-
-            const response = await fetch('{{ import_post_url }}', {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': csrfToken,
-                    'Accept': 'application/json'
-                },
-                credentials: 'same-origin',
-                body: formData
-            });
-
-            const contentType = response.headers.get('content-type') || '';
-
-            if (response.ok) {
-                let progress = 0;
-                const interval = setInterval(() => {
-                    progress += 5;
-                    if (progress <= 95) {
-                        updateProgress(progress, progress * totalRows / 100, totalRows);
-                    }
-                }, 100);
-
-                if (contentType.includes('application/json')) {
-                    const result = await response.json();
-                    clearInterval(interval);
-                    updateProgress(100, totalRows, totalRows);
-                    setTimeout(() => { showResult(result); }, 500);
-                } else {
-                    const text = await response.text();
-                    clearInterval(interval);
-                    updateProgress(100, totalRows, totalRows);
-                    showHtmlErrorResponse(text);
-                }
-            } else {
-                let errorObj = null;
-                let text = null;
-
-                if (contentType.includes('application/json')) {
-                    try {
-                        errorObj = await response.json();
-                    } catch (jsonError) {
-                        errorObj = { erro: 'Resposta JSON invalida' };
-                    }
-                } else {
-                    text = await response.text();
-                }
-
-                const arquivoErro = (errorObj && errorObj.erro && errorObj.erro.toString().toLowerCase().includes('arquivo nao fornecido'))
-                    || (text && text.toLowerCase().includes('arquivo nao fornecido'));
-
-                if (arquivoErro) {
-                    if (confirm('Upload via AJAX falhou (arquivo nao enviado). Deseja tentar enviar o formulario de forma tradicional?')) {
-                        document.getElementById('importForm').removeEventListener('submit', importFormHandler);
-                        document.getElementById('importForm').submit();
-                        return;
-                    }
-                    location.reload();
-                    return;
-                }
-
-                if (errorObj) {
-                    alert('Erro na importacao: ' + JSON.stringify(errorObj));
-                } else if (text) {
-                    showHtmlErrorResponse(text);
-                    return;
-                } else {
-                    alert('Erro desconhecido na importacao');
-                }
-
-                location.reload();
-            }
-        } catch (error) {
-            alert('Erro de rede ou JS: ' + error.message);
-            location.reload();
+    try {
+        const csrfTokenField = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        const response = await fetch('{{ import_post_url }}', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfTokenField ? csrfTokenField.value : '',
+                'Accept': 'application/json'
+            },
+            credentials: 'same-origin',
+            body: formData
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.erro || 'Não foi possível enfileirar a importação');
         }
-    };
-
-    reader.readAsArrayBuffer(file);
+        updateProgress(0, 0, 0, result.mensagem || 'Importação aguardando processamento...');
+        acompanharImportacao(result.status_url);
+    } catch (error) {
+        mostrarFalha(error.message);
+    }
 }
 
 document.getElementById('importForm').addEventListener('submit', importFormHandler);
 
-function updateProgress(percent, current, total) {
+function updateProgress(percent, current, total, statusMessage) {
     const progressBar = document.getElementById('progressBar');
     const progressText = document.getElementById('progressText');
     const progressCount = document.getElementById('progressCount');
@@ -333,7 +265,9 @@ function updateProgress(percent, current, total) {
     progressText.textContent = Math.round(percent) + '%';
     progressCount.textContent = Math.round(current) + '/' + total;
 
-    if (percent < 30) {
+    if (statusMessage) {
+        progressStatus.textContent = statusMessage;
+    } else if (percent < 30) {
         progressStatus.textContent = 'Lendo arquivo Excel...';
     } else if (percent < 60) {
         progressStatus.textContent = 'Validando dados...';
@@ -341,6 +275,37 @@ function updateProgress(percent, current, total) {
         progressStatus.textContent = 'Criando profissionais...';
     } else {
         progressStatus.textContent = 'Finalizando importacao...';
+    }
+}
+
+async function acompanharImportacao(statusUrl) {
+    try {
+        const response = await fetch(statusUrl, {credentials: 'same-origin', headers: {'Accept': 'application/json'}});
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.erro || 'Não foi possível consultar a importação');
+        }
+
+        const total = result.total_linhas || 0;
+        const percent = total ? Math.min(99, Math.round((result.total_processados / total) * 100)) : 0;
+        const mensagens = {
+            aguardando: 'Importação na fila. Você pode continuar navegando.',
+            processando: 'Processando cartões no servidor...',
+        };
+        updateProgress(percent, result.total_processados, total, mensagens[result.status]);
+
+        if (result.status === 'concluida') {
+            updateProgress(100, result.total_processados, total, 'Importação concluída.');
+            showResult(result);
+            mostrarNotificacao('Importação concluída', `${result.total_importados} cartão(ões) importado(s).`, 'success');
+            return;
+        }
+        if (result.status === 'falhou') {
+            throw new Error(result.mensagem_erro || 'A importação falhou');
+        }
+        window.setTimeout(() => acompanharImportacao(statusUrl), 1500);
+    } catch (error) {
+        mostrarFalha(error.message);
     }
 }
 
@@ -372,6 +337,29 @@ function showResult(result) {
 
         errorsList.style.display = 'block';
     }
+}
+
+function mostrarFalha(mensagem) {
+    document.getElementById('progressContainer').style.display = 'none';
+    document.getElementById('formButtons').style.display = 'flex';
+    document.getElementById('btnSubmit').disabled = false;
+    mostrarNotificacao('Erro na importação', mensagem, 'danger');
+}
+
+function mostrarNotificacao(titulo, mensagem, tipo) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${tipo} alert-dismissible fade show position-fixed top-0 end-0 m-3 shadow`;
+    notification.style.zIndex = '1080';
+    notification.setAttribute('role', 'alert');
+    notification.innerHTML = `<strong>${titulo}</strong><br>`;
+    notification.append(document.createTextNode(mensagem));
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'btn-close';
+    close.setAttribute('data-bs-dismiss', 'alert');
+    close.setAttribute('aria-label', 'Fechar');
+    notification.append(close);
+    document.body.append(notification);
 }
 
 function showHtmlErrorResponse(html) {

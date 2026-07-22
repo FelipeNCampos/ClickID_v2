@@ -19,6 +19,7 @@ urlpatterns = [
     path('profissionais/', web_views.profissionais_list, name='profissionais-list'),
     path('profissionais/novo/', web_views.profissional_create, name='profissional-create'),
     path('profissionais/importar/', web_views.profissionais_import, name='profissionais-import'),
+    path('profissionais/importar/<uuid:importacao_pk>/status/', web_views.profissionais_import_status, name='profissionais-import-status'),
     path('profissionais/importar-dados/', web_views.profissionais_import_dados, name='profissionais-import-dados'),
     path('profissionais/<uuid:pk>/', web_views.profissional_detail, name='profissional-detail'),
     # The edit form is rendered/handled by `profissional_detail` (no separate profissional_edit function)

@@ -149,3 +149,39 @@ class Profissional(models.Model):
         """Verifica se profissional precisa alterar senha"""
         return not self.senha_alterada
 
+
+class ImportacaoProfissionais(models.Model):
+    """Job persistente para importar profissionais sem reter a requisição HTTP."""
+
+    class Status(models.TextChoices):
+        AGUARDANDO = 'aguardando', 'Aguardando processamento'
+        PROCESSANDO = 'processando', 'Processando'
+        CONCLUIDA = 'concluida', 'Concluída'
+        FALHOU = 'falhou', 'Falhou'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='importacoes_profissionais')
+    solicitada_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name='importacoes_profissionais')
+    departamento = models.ForeignKey(Departamento, on_delete=models.SET_NULL, null=True, blank=True)
+    arquivo = models.FileField(upload_to='importacoes/profissionais/%Y/%m/%d/')
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.AGUARDANDO, db_index=True)
+    total_linhas = models.PositiveIntegerField(default=0)
+    total_processados = models.PositiveIntegerField(default=0)
+    total_importados = models.PositiveIntegerField(default=0)
+    total_ignorados = models.PositiveIntegerField(default=0)
+    total_erros = models.PositiveIntegerField(default=0)
+    erros = models.JSONField(default=list, blank=True)
+    mensagem_erro = models.TextField(blank=True)
+    criada_em = models.DateTimeField(auto_now_add=True)
+    iniciada_em = models.DateTimeField(null=True, blank=True)
+    finalizada_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Importação de Profissionais'
+        verbose_name_plural = 'Importações de Profissionais'
+        ordering = ['-criada_em']
+        indexes = [models.Index(fields=['empresa', 'status'])]
+
+    def __str__(self):
+        return f'Importação {self.id} - {self.get_status_display()}'
+

@@ -2,11 +2,14 @@
 Views web para gerente
 """
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
+from django.db import transaction
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.core.paginator import Paginator
 from functools import wraps
-from empresas.models import Empresa, Departamento, Profissional
+from empresas.models import Empresa, Departamento, ImportacaoProfissionais, Profissional
+from empresas.tasks import processar_importacao_profissionais
 from empresas import serializers as empresas_serializers
 from usuarios.models import LogAuditoria
 from coletas.models import Coleta
@@ -514,7 +517,7 @@ def profissional_create(request, empresa_pk):
 
 
 @gerente_required
-def profissional_import(request, empresa_pk):
+def profissional_import_legacy(request, empresa_pk):
     """Importar profissionais via Excel"""
     from django.http import JsonResponse
     from django.urls import reverse
@@ -631,6 +634,83 @@ def profissional_import(request, empresa_pk):
         'back_url': reverse('web-gerente:empresa-detail', kwargs={'pk': empresa_pk}),
         'success_url': reverse('web-gerente:empresa-detail', kwargs={'pk': empresa_pk}),
         'empresa_hidden_id': str(empresa_pk),
+    })
+
+
+@gerente_required
+def profissional_import(request, empresa_pk):
+    """Recebe o arquivo e agenda a importação, sem bloquear a requisição web."""
+    from django.urls import reverse
+
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+    if request.method == 'POST':
+        arquivo = request.FILES.get('arquivo')
+        if not arquivo:
+            return JsonResponse({'erro': 'Arquivo não fornecido'}, status=400) if is_ajax else redirect(request.path)
+        if arquivo.size > 50 * 1024 * 1024:
+            return JsonResponse({'erro': 'O arquivo deve ter no máximo 50 MB'}, status=400) if is_ajax else redirect(request.path)
+
+        empresa_obj = get_object_or_404(Empresa, usuario_id=empresa_pk)
+        departamento = None
+        departamento_id = request.POST.get('departamento')
+        if departamento_id:
+            departamento = Departamento.objects.filter(pk=departamento_id, empresa=empresa_obj).first()
+            if not departamento:
+                return JsonResponse({'erro': 'Departamento inválido'}, status=400) if is_ajax else redirect(request.path)
+
+        importacao = ImportacaoProfissionais.objects.create(
+            empresa=empresa_obj,
+            solicitada_por=request.user,
+            departamento=departamento,
+            arquivo=arquivo,
+        )
+        transaction.on_commit(lambda: processar_importacao_profissionais.delay(str(importacao.pk)))
+        status_url = reverse(
+            'web-gerente:profissional-import-status',
+            kwargs={'empresa_pk': empresa_pk, 'importacao_pk': importacao.pk},
+        )
+        if is_ajax:
+            return JsonResponse({
+                'importacao_id': str(importacao.pk),
+                'status': importacao.status,
+                'status_url': status_url,
+                'mensagem': 'Arquivo recebido. A importação continuará em segundo plano.',
+            }, status=202)
+        messages.info(request, 'Arquivo recebido. A importação continuará em segundo plano.')
+        return redirect('web-gerente:empresa-detail', pk=empresa_pk)
+
+    empresa_obj = get_object_or_404(Empresa, usuario_id=empresa_pk)
+    empresa = empresas_serializers.EmpresaSerializer(empresa_obj, context={'request': request}).data
+    departamentos = empresas_serializers.DepartamentoListSerializer(
+        Departamento.objects.filter(empresa=empresa_obj), many=True
+    ).data
+    return render(request, 'empresas/profissional_import.html', {
+        'empresa': empresa,
+        'departamentos': departamentos,
+        'import_post_url': reverse('web-gerente:profissional-import', kwargs={'empresa_pk': empresa_pk}),
+        'back_url': reverse('web-gerente:empresa-detail', kwargs={'pk': empresa_pk}),
+        'success_url': reverse('web-gerente:empresa-detail', kwargs={'pk': empresa_pk}),
+        'empresa_hidden_id': str(empresa_pk),
+    })
+
+
+@gerente_required
+def profissional_import_status(request, empresa_pk, importacao_pk):
+    importacao = get_object_or_404(
+        ImportacaoProfissionais,
+        pk=importacao_pk,
+        empresa__usuario_id=empresa_pk,
+    )
+    return JsonResponse({
+        'id': str(importacao.pk),
+        'status': importacao.status,
+        'total_linhas': importacao.total_linhas,
+        'total_processados': importacao.total_processados,
+        'total_importados': importacao.total_importados,
+        'total_ignorados': importacao.total_ignorados,
+        'total_erros': importacao.total_erros,
+        'erros': importacao.erros[:10],
+        'mensagem_erro': importacao.mensagem_erro,
     })
 
 

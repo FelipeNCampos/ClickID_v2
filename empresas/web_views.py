@@ -1,7 +1,9 @@
 """
 Views web para empresa
 """
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
+from django.http import JsonResponse
+from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -14,6 +16,8 @@ from django.utils import timezone
 from datetime import datetime as _datetime
 from django.db.utils import InterfaceError
 from clickid_core.db_utils import close_db_connections
+from .models import Departamento, Empresa, ImportacaoProfissionais
+from .tasks import processar_importacao_profissionais
 logger = logging.getLogger(__name__)
 
 
@@ -250,7 +254,7 @@ def profissional_create(request):
 
 
 @empresa_required
-def profissionais_import(request):
+def profissionais_import_legacy(request):
     """Importar profissionais via Excel"""
     # Log incoming request keys to help diagnose missing file issues
     try:
@@ -443,6 +447,69 @@ def profissionais_import(request):
         'back_url': reverse('web-empresa:profissionais-list'),
         'success_url': reverse('web-empresa:profissionais-list'),
         'empresa_hidden_id': str(request.user.id),
+    })
+
+
+@empresa_required
+def profissionais_import(request):
+    """Recebe o arquivo e deixa o worker processá-lo em segundo plano."""
+    from django.urls import reverse
+
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+    empresa = get_object_or_404(Empresa, usuario=request.user)
+    if request.method == 'POST':
+        arquivo = request.FILES.get('arquivo')
+        if not arquivo:
+            return JsonResponse({'erro': 'Arquivo não fornecido'}, status=400) if is_ajax else redirect(request.path)
+        if arquivo.size > 50 * 1024 * 1024:
+            return JsonResponse({'erro': 'O arquivo deve ter no máximo 50 MB'}, status=400) if is_ajax else redirect(request.path)
+
+        departamento = None
+        departamento_id = request.POST.get('departamento')
+        if departamento_id:
+            departamento = Departamento.objects.filter(pk=departamento_id, empresa=empresa).first()
+            if not departamento:
+                return JsonResponse({'erro': 'Departamento inválido'}, status=400) if is_ajax else redirect(request.path)
+
+        importacao = ImportacaoProfissionais.objects.create(
+            empresa=empresa,
+            solicitada_por=request.user,
+            departamento=departamento,
+            arquivo=arquivo,
+        )
+        transaction.on_commit(lambda: processar_importacao_profissionais.delay(str(importacao.pk)))
+        status_url = reverse('web-empresa:profissionais-import-status', kwargs={'importacao_pk': importacao.pk})
+        if is_ajax:
+            return JsonResponse({
+                'importacao_id': str(importacao.pk),
+                'status': importacao.status,
+                'status_url': status_url,
+                'mensagem': 'Arquivo recebido. A importação continuará em segundo plano.',
+            }, status=202)
+        messages.info(request, 'Arquivo recebido. A importação continuará em segundo plano.')
+        return redirect('web-empresa:profissionais-list')
+
+    return render(request, 'empresas/profissional_import.html', {
+        'import_post_url': reverse('web-empresa:profissionais-import'),
+        'back_url': reverse('web-empresa:profissionais-list'),
+        'success_url': reverse('web-empresa:profissionais-list'),
+        'empresa_hidden_id': str(request.user.id),
+    })
+
+
+@empresa_required
+def profissionais_import_status(request, importacao_pk):
+    importacao = get_object_or_404(ImportacaoProfissionais, pk=importacao_pk, empresa__usuario=request.user)
+    return JsonResponse({
+        'id': str(importacao.pk),
+        'status': importacao.status,
+        'total_linhas': importacao.total_linhas,
+        'total_processados': importacao.total_processados,
+        'total_importados': importacao.total_importados,
+        'total_ignorados': importacao.total_ignorados,
+        'total_erros': importacao.total_erros,
+        'erros': importacao.erros[:10],
+        'mensagem_erro': importacao.mensagem_erro,
     })
 
 

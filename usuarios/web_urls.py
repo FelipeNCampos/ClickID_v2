@@ -33,6 +33,7 @@ urlpatterns = [
     # Profissionais
     path('empresas/<uuid:empresa_pk>/profissionais/novo/', web_views.profissional_create, name='profissional-create'),
     path('empresas/<uuid:empresa_pk>/profissionais/importar/', web_views.profissional_import, name='profissional-import'),
+    path('empresas/<uuid:empresa_pk>/profissionais/importar/<uuid:importacao_pk>/status/', web_views.profissional_import_status, name='profissional-import-status'),
     path('empresas/<uuid:empresa_pk>/profissionais/<uuid:pk>/', web_views.profissional_detail, name='profissional-detail'),
     path('empresas/<uuid:empresa_pk>/profissionais/<uuid:pk>/editar/', web_views.profissional_edit, name='profissional-edit'),
     path('empresas/<uuid:empresa_pk>/profissionais/<uuid:pk>/reset-senha/', web_views.profissional_reset_password, name='profissional-reset-password'),
