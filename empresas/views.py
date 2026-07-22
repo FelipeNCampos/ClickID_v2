@@ -22,6 +22,134 @@ logger = logging.getLogger(__name__)
 from clickid_core.db_utils import get_request_params
 
 
+def _process_profissionais_excel_import(arquivo, empresa, user, request=None):
+    """Processa a importação de profissionais a partir de um arquivo Excel."""
+    import openpyxl
+    from io import BytesIO
+    import uuid
+    from django.db import IntegrityError
+    from usuarios.models import Usuario
+
+    try:
+        wb = openpyxl.load_workbook(BytesIO(arquivo.read()))
+        ws = wb.active
+    except Exception as e:
+        return {'erro': f'Erro ao ler arquivo Excel: {str(e)}'}, status.HTTP_400_BAD_REQUEST
+
+    cpfs_existentes = set(
+        Profissional.objects.filter(empresa=empresa)
+        .values_list('cpf', flat=True)
+    )
+
+    emails_existentes = set(
+        Usuario.objects.values_list('email', flat=True)
+    )
+
+    profissionais_para_criar = []
+    importados = []
+    ignorados = []
+    erros = []
+
+    for idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+        if not any(row):
+            continue
+
+        nome = row[0]
+        cpf = str(row[1]).replace('.', '').replace('-', '').strip() if row[1] else None
+        email_excel = row[2] if len(row) > 2 and row[2] and str(row[2]).strip() != '-' else None
+
+        if not nome or not cpf:
+            erros.append({'linha': idx, 'erro': 'Nome e CPF são obrigatórios'})
+            continue
+
+        if cpf in cpfs_existentes:
+            ignorados.append({'linha': idx, 'nome': nome, 'cpf': cpf, 'motivo': 'CPF já cadastrado'})
+            continue
+
+        if email_excel:
+            email_final = email_excel
+            email_base = email_excel.split('@')[0]
+            email_dominio = email_excel.split('@')[1] if '@' in email_excel else 'clickid.temp'
+        else:
+            unique_id = str(uuid.uuid4())[:8]
+            email_final = f'profissional_{cpf}_{unique_id}@clickid.temp'
+            email_base = f'profissional_{cpf}'
+            email_dominio = 'clickid.temp'
+
+        tentativas = 0
+        while email_final in emails_existentes and tentativas < 10:
+            unique_id = str(uuid.uuid4())[:8]
+            email_final = f'{email_base}_{unique_id}@{email_dominio}'
+            tentativas += 1
+
+        if tentativas >= 10:
+            erros.append({'linha': idx, 'erro': 'Não foi possível gerar email único'})
+            continue
+
+        emails_existentes.add(email_final)
+        profissionais_para_criar.append({
+            'linha': idx,
+            'nome': nome,
+            'cpf': cpf,
+            'email_excel': email_excel,
+            'email_final': email_final,
+            'senha': cpf[-4:] if len(cpf) >= 4 else cpf
+        })
+
+    for idx, prof_data in enumerate(profissionais_para_criar, 1):
+        try:
+            with transaction.atomic():
+                usuario = Usuario.objects.create(
+                    email=prof_data['email_final'],
+                    tipo_usuario='profissional'
+                )
+                usuario.set_password(prof_data['senha'])
+                usuario.save()
+
+                Profissional.objects.create(
+                    usuario=usuario,
+                    empresa=empresa,
+                    nome=prof_data['nome'],
+                    cpf=prof_data['cpf'],
+                    email=prof_data['email_excel']
+                )
+
+                importados.append({
+                    'linha': prof_data['linha'],
+                    'nome': prof_data['nome'],
+                    'cpf': prof_data['cpf']
+                })
+
+        except IntegrityError as e:
+            erros.append({'linha': prof_data['linha'], 'erro': f'Erro ao criar: {str(e)}'})
+        except Exception as e:
+            erros.append({'linha': prof_data['linha'], 'erro': f'Erro inesperado: {str(e)}'})
+
+    if importados:
+        LogAuditoria.registrar(
+            usuario=user,
+            tipo_acao=TipoAcao.PROFISSIONAL_CRIADO,
+            descricao=f'Importação Excel: {len(importados)} profissionais criados, {len(ignorados)} já cadastrados, {len(erros)} erros',
+            empresa=empresa,
+            dados_adicionais={
+                'total_importados': len(importados),
+                'total_ignorados': len(ignorados),
+                'total_erros': len(erros),
+                'arquivo': arquivo.name
+            },
+            request=request
+        )
+
+    return {
+        'total_importados': len(importados),
+        'total_ignorados': len(ignorados),
+        'total_erros': len(erros),
+        'importados': importados,
+        'ignorados': ignorados[:10],
+        'erros': erros[:10]
+    }, status.HTTP_201_CREATED
+
+
 class EmpresaViewSet(viewsets.ModelViewSet):
     """ViewSet para Empresa"""
     queryset = Empresa.objects.select_related('usuario').all()
@@ -195,12 +323,6 @@ class ProfissionalViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def import_excel(self, request):
         """Importar profissionais via Excel - OTIMIZADO"""
-        import openpyxl
-        from io import BytesIO
-        import uuid
-        from django.db import IntegrityError
-        from usuarios.models import Usuario
-        
         arquivo = request.FILES.get('arquivo')
         empresa_id = request.data.get('empresa')
 
@@ -261,185 +383,14 @@ class ProfissionalViewSet(viewsets.ModelViewSet):
             except Exception:
                 logger.exception('import_excel: erro durante fallback da busca de Empresa')
                 return Response({'erro': 'Empresa não encontrada', 'empresa_recebida': empresa_id}, status=status.HTTP_404_NOT_FOUND)
-        
-        # Ler arquivo Excel
-        try:
-            wb = openpyxl.load_workbook(BytesIO(arquivo.read()))
-            ws = wb.active
-        except Exception as e:
-            return Response({'erro': f'Erro ao ler arquivo Excel: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # OTIMIZAÇÃO: Buscar TODOS os CPFs existentes de uma vez
-        cpfs_existentes = set(
-            Profissional.objects.filter(empresa=empresa)
-            .values_list('cpf', flat=True)
+
+        data, response_status = _process_profissionais_excel_import(
+            arquivo=arquivo,
+            empresa=empresa,
+            user=request.user,
+            request=request,
         )
-        
-        # OTIMIZAÇÃO: Buscar TODOS os emails existentes de uma vez
-        emails_existentes = set(
-            Usuario.objects.values_list('email', flat=True)
-        )
-        
-        print(f"\n=== IMPORTAÇÃO INICIADA ===")
-        print(f"CPFs já cadastrados na empresa: {len(cpfs_existentes)}")
-        print(f"Emails já cadastrados no sistema: {len(emails_existentes)}")
-        
-        # Listas para processar
-        profissionais_para_criar = []
-        importados = []
-        ignorados = []
-        erros = []
-        
-        # FASE 1: Validar e preparar dados (SEM acesso ao banco)
-        print("\nFASE 1: Validando dados do Excel...")
-        for idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-            if not any(row):  # Pular linhas vazias
-                continue
-            
-            nome = row[0]
-            cpf = str(row[1]).replace('.', '').replace('-', '').strip() if row[1] else None
-            email_excel = row[2] if len(row) > 2 and row[2] and str(row[2]).strip() != '-' else None
-            
-            # Validação básica
-            if not nome or not cpf:
-                erros.append({
-                    'linha': idx,
-                    'erro': 'Nome e CPF são obrigatórios'
-                })
-                continue
-            
-            # Verificar se CPF já existe (em memória)
-            if cpf in cpfs_existentes:
-                ignorados.append({
-                    'linha': idx,
-                    'nome': nome,
-                    'cpf': cpf,
-                    'motivo': 'CPF já cadastrado'
-                })
-                continue
-            
-            # Gerar email único
-            if email_excel:
-                email_final = email_excel
-                email_base = email_excel.split('@')[0]
-                email_dominio = email_excel.split('@')[1] if '@' in email_excel else 'clickid.temp'
-            else:
-                unique_id = str(uuid.uuid4())[:8]
-                email_final = f'profissional_{cpf}_{unique_id}@clickid.temp'
-                email_base = f'profissional_{cpf}'
-                email_dominio = 'clickid.temp'
-            
-            # Garantir email único (em memória)
-            tentativas = 0
-            while email_final in emails_existentes and tentativas < 10:
-                unique_id = str(uuid.uuid4())[:8]
-                email_final = f'{email_base}_{unique_id}@{email_dominio}'
-                tentativas += 1
-            
-            if tentativas >= 10:
-                erros.append({
-                    'linha': idx,
-                    'erro': 'Não foi possível gerar email único'
-                })
-                continue
-            
-            # Adicionar email à lista de existentes (para próximas iterações)
-            emails_existentes.add(email_final)
-            
-            # Adicionar à lista de criação
-            profissionais_para_criar.append({
-                'linha': idx,
-                'nome': nome,
-                'cpf': cpf,
-                'email_excel': email_excel,
-                'email_final': email_final,
-                'senha': cpf[-4:] if len(cpf) >= 4 else cpf
-            })
-        
-        print(f"Validação concluída:")
-        print(f"  - Para criar: {len(profissionais_para_criar)}")
-        print(f"  - Ignorados: {len(ignorados)}")
-        print(f"  - Erros: {len(erros)}")
-        
-        # FASE 2: Criar profissionais em lote
-        print(f"\nFASE 2: Criando {len(profissionais_para_criar)} profissionais...")
-        total_criar = len(profissionais_para_criar)
-        
-        for idx, prof_data in enumerate(profissionais_para_criar, 1):
-            # Log de progresso a cada 50
-            if idx % 50 == 0 or idx == total_criar:
-                print(f"  Progresso: {idx}/{total_criar} ({idx*100//total_criar}%)")
-            
-            try:
-                with transaction.atomic():
-                    # Criar usuário
-                    usuario = Usuario.objects.create(
-                        email=prof_data['email_final'],
-                        tipo_usuario='profissional'
-                    )
-                    usuario.set_password(prof_data['senha'])
-                    usuario.save()
-                    
-                    # Criar profissional
-                    profissional = Profissional.objects.create(
-                        usuario=usuario,
-                        empresa=empresa,
-                        nome=prof_data['nome'],
-                        cpf=prof_data['cpf'],
-                        email=prof_data['email_excel']  # Email original do Excel ou None
-                    )
-                    
-                    importados.append({
-                        'linha': prof_data['linha'],
-                        'nome': prof_data['nome'],
-                        'cpf': prof_data['cpf']
-                    })
-                    
-            except IntegrityError as e:
-                print(f"  ERRO linha {prof_data['linha']}: IntegrityError - {str(e)}")
-                erros.append({
-                    'linha': prof_data['linha'],
-                    'erro': f'Erro ao criar: {str(e)}'
-                })
-            except Exception as e:
-                print(f"  ERRO linha {prof_data['linha']}: {type(e).__name__} - {str(e)}")
-                erros.append({
-                    'linha': prof_data['linha'],
-                    'erro': f'Erro inesperado: {str(e)}'
-                })
-        
-        print(f"\n=== IMPORTAÇÃO FINALIZADA ===")
-        print(f"Total processado: {len(importados) + len(ignorados) + len(erros)}")
-        print(f"Importados: {len(importados)}")
-        print(f"Ignorados: {len(ignorados)}")
-        print(f"Erros: {len(erros)}")
-        print(f"==============================\n")
-        
-        # Registrar auditoria
-        if importados:
-            from auditoria.models import LogAuditoria, TipoAcao
-            LogAuditoria.registrar(
-                usuario=request.user,
-                tipo_acao=TipoAcao.PROFISSIONAL_CRIADO,
-                descricao=f'Importação Excel: {len(importados)} profissionais criados, {len(ignorados)} já cadastrados, {len(erros)} erros',
-                empresa=empresa,
-                dados_adicionais={
-                    'total_importados': len(importados),
-                    'total_ignorados': len(ignorados),
-                    'total_erros': len(erros),
-                    'arquivo': arquivo.name
-                },
-                request=request
-            )
-        
-        return Response({
-            'total_importados': len(importados),
-            'total_ignorados': len(ignorados),
-            'total_erros': len(erros),
-            'importados': importados,
-            'ignorados': ignorados[:10],  # Limitar a 10 para não sobrecarregar
-            'erros': erros[:10]  # Limitar a 10 erros para não sobrecarregar
-        }, status=status.HTTP_201_CREATED)
+        return Response(data, status=response_status)
     
     @action(detail=True, methods=['post'])
     def reset_password(self, request, pk=None):
